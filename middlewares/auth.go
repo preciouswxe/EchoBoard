@@ -4,12 +4,11 @@ import (
 	"strconv"
 	"strings"
 
-	"bluebell/controller"
-	"bluebell/dao/redis"
-	"bluebell/pkg/jwt"
 	"github.com/gin-gonic/gin"
+	"github.com/preciouswxe/EchoBoard_backend/controller"
+	"github.com/preciouswxe/EchoBoard_backend/dao/redis"
+	"github.com/preciouswxe/EchoBoard_backend/pkg/jwt"
 )
-
 
 // JWTAuthMiddleware 基于JWT的认证中间件
 func JWTAuthMiddleware() func(c *gin.Context) {
@@ -42,8 +41,8 @@ func JWTAuthMiddleware() func(c *gin.Context) {
 		}
 
 		// Redis 中取出对应 UserID 的 token ,校验 token 是否一致（防止异地多端登录）
-		key := "login_token:"+ strconv.FormatInt(mc.UserID, 10)
-		redistoken, err := redis.GetClient().Get(c,key).Result()
+		key := "login_token:" + strconv.FormatInt(mc.UserID, 10)
+		redistoken, err := redis.GetClient().Get(c, key).Result()
 		if err != nil {
 			controller.ResponseError(c, controller.CodeInvalidToken)
 			c.Abort()
@@ -67,7 +66,6 @@ func JWTAuthMiddleware() func(c *gin.Context) {
 		c.Next()
 	}
 }
-
 
 // ✅ 可选增强（未来可以加）
 // 记录登录设备信息（IP、UA）

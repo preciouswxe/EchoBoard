@@ -2,11 +2,11 @@ package jwt
 
 import (
 	"errors"
-	"github.com/dgrijalva/jwt-go"
+	"github.com/spf13/viper"
 	"time"
-)
 
-const TokenExpireDuration = time.Hour * 2
+	"github.com/dgrijalva/jwt-go"
+)
 
 var mySecret = []byte("夏天夏天悄悄过去")
 
@@ -15,7 +15,7 @@ var mySecret = []byte("夏天夏天悄悄过去")
 // 我们这里需要额外记录一个 字段，所以要自定义结构体
 // 如果想要保存更多信息，都可以添加到这个结构体中
 type MyClaims struct {
-	UserID int64 `json:"user_id"`
+	UserID   int64  `json:"user_id"`
 	Username string `json:"username"`
 	jwt.StandardClaims
 }
@@ -23,11 +23,12 @@ type MyClaims struct {
 func GenToken(userID int64, username string) (string, error) {
 	// 创建一个我们自己的声明的数据
 	c := MyClaims{
-		UserID: userID,
+		UserID:   userID,
 		Username: username,
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(TokenExpireDuration).Unix(),
-			Issuer: "bluebell",
+			ExpiresAt: time.Now().Add(
+				time.Duration(viper.GetInt("auth.jwt_expire")) * time.Hour).Unix(),
+			Issuer: "github.com/preciouswxe/EchoBoard_backend",
 		},
 	}
 	// 使用指定的签名方法先创建签名对象

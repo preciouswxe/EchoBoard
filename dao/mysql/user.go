@@ -1,28 +1,22 @@
 package mysql
 
 import (
-	"bluebell/models"
 	"crypto/md5"
 	"database/sql"
 	"encoding/hex"
-	"errors"
+	"github.com/preciouswxe/EchoBoard_backend/models"
 )
 
 // 把每一步数据库操作封装成函数
 // 等待 logic 层根据业务需求调用
 
 const secret = "Lifridom"
-var (
-	ErrorUserExist = errors.New("用户已存在")
-	ErrorUserNotExist = errors.New("用户不存在")
-	ErrorInvalidPassword = errors.New("用户名或密码错误")
-)
 
 // CheckUserExist 检查指定用户名的用户是否存在
 func CheckUserExist(username string) error {
 	sqlStr := `select count(user_id) from user where username = ?`
 	var count int
-	if err := db.Get(&count, sqlStr, username); err != nil{
+	if err := db.Get(&count, sqlStr, username); err != nil {
 		return err
 	}
 	if count > 0 {
@@ -59,7 +53,7 @@ func Login(user *models.User) error {
 	if err == sql.ErrNoRows {
 		return ErrorUserNotExist
 	}
-	if  err != nil {
+	if err != nil {
 		// 查询数据库失败
 		return err
 	}

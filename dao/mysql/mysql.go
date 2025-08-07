@@ -1,8 +1,8 @@
 package mysql
 
 import (
-	"bluebell/setting"
 	"fmt"
+	"github.com/preciouswxe/EchoBoard_backend/setting"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 
@@ -13,7 +13,7 @@ import (
 var db *sqlx.DB
 
 func Init(cfg *setting.MySQLConfig) (err error) {
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True",
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=true",
 		cfg.User,
 		cfg.Password,
 		cfg.Host,

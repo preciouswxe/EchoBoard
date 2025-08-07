@@ -5,6 +5,8 @@ app:
   version: "v0.1.26"
   start_time: "2025-07-26"
   machine_id: 1
+auth:
+  jwt_expire: 2
 log:
   level: "debug"
   filename: "web_app.log"

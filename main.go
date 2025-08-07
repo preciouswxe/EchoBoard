@@ -1,29 +1,30 @@
 package main
 
 import (
-	"bluebell/controller"
-	"bluebell/dao/mysql"
-	"bluebell/dao/redis"
-	"bluebell/logger"
-	"bluebell/pkg/snowflake"
-	"bluebell/router"
-	"bluebell/setting"
 	"context"
 	"fmt"
-	"github.com/spf13/viper"
-	"go.uber.org/zap"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/preciouswxe/EchoBoard_backend/controller"
+	"github.com/preciouswxe/EchoBoard_backend/dao/mysql"
+	"github.com/preciouswxe/EchoBoard_backend/dao/redis"
+	"github.com/preciouswxe/EchoBoard_backend/logger"
+	"github.com/preciouswxe/EchoBoard_backend/pkg/snowflake"
+	"github.com/preciouswxe/EchoBoard_backend/router"
+	"github.com/preciouswxe/EchoBoard_backend/setting"
+	"github.com/spf13/viper"
+	"go.uber.org/zap"
 )
 
 // Go Web 开发较通用的脚手架模板
 
 func main() {
 	// 1. 加载配置文件
-	if err := setting.Init(os.Args[1]); err != nil {
+	if err := setting.Init(); err != nil {
 		fmt.Printf("init setting failed, err:%v\n", err)
 		return
 	}
@@ -57,7 +58,7 @@ func main() {
 	}
 
 	// 初始化 gin 框架内置的校验器使用的翻译器
-	if err := controller.InitTrans("zh") ; err != nil {
+	if err := controller.InitTrans("zh"); err != nil {
 		fmt.Printf("init trans failed, err:%v\n", err)
 		return
 	}
@@ -85,8 +86,8 @@ func main() {
 	// kill -2 发送 syscall.SIGINT 信号，我们常用的 Ctrl+C 就是触发系统 SIGINT 信号
 	// kill -9 发送 syscall.SIGKILL 信号，但是不能被捕获，所以不需要添加它
 	// signal.Notify 把收到的 syscall.SIGINT或 syscall.SIGTERM 信号转发给quit
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM) 	// 此处不会阻塞
-	<-quit                                               	// 阻塞在此，当接收到上述两种信号时才会往下执行
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM) // 此处不会阻塞
+	<-quit                                               // 阻塞在此，当接收到上述两种信号时才会往下执行
 	zap.L().Info("Shutdown Server ...")
 
 	// 创建一个5秒超时的context

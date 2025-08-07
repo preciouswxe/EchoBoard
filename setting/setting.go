@@ -1,10 +1,10 @@
 package setting
 
 import (
-	"flag"
 	"fmt"
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
+	"os"
 )
 
 // Conf 全局变量，用于保存程序的所有配置信息
@@ -18,12 +18,12 @@ type multipleConfig struct {
 }
 
 type AppConfig struct {
-	Name         string `mapstructure:"name"`
-	Mode         string `mapstructure:"mode"`
-	Version      string `mapstructure:"version"`
-	StartTime    string `mapstructure:"start_time"`
-	MachineID    int64  `mapstructure:"machine_id"`
-	Port         int    `mapstructure:"port"`
+	Name      string `mapstructure:"name"`
+	Mode      string `mapstructure:"mode"`
+	Version   string `mapstructure:"version"`
+	StartTime string `mapstructure:"start_time"`
+	MachineID int64  `mapstructure:"machine_id"`
+	Port      int    `mapstructure:"port"`
 }
 
 type LogConfig struct {
@@ -52,12 +52,12 @@ type RedisConfig struct {
 	PoolSize int    `mapstructure:"pool_size"`
 }
 
-func Init(filePath string) (err error) {
+func Init() (err error) {
 	// 方式 1: 直接指定配置文件路径（相对路径或者绝对路径）
 	// 相对路径：相对执行的可执行文件的相对路径
 	//viper.SetConfigFile("./conf/config.yaml")
 	// 绝对路径：系统中实际的文件路径
-	//viper.SetConfigFile("D:/GOfiles/bluebell/conf/config.yaml")
+	//viper.SetConfigFile("D:/GOfiles/EchoBoard/EchoBoard_backend/conf/config.yaml")
 
 	// 方式 2: 指定配置文件名和配置文件的位置，viper 自行查找可用的配置文件
 	// 配置文件名不需要带后缀
@@ -68,9 +68,15 @@ func Init(filePath string) (err error) {
 
 	// viper.SetConfigType("yaml")      // （专用于远程）指定配置文件类型 支持 yaml / json
 
-	flag.StringVar(&filePath, "filePath", "config.yaml", "文件路径")
-	// 必须调用 flag.Parse() 来解析命令行参数
-	flag.Parse()
+	//flag.StringVar(&filePath, "filePath", "config.yaml", "文件路径")
+	//// 必须调用 flag.Parse() 来解析命令行参数
+	//flag.Parse()
+
+	filePath := os.Getenv("CONFIG_PATH")
+	if filePath == "" {
+		filePath = "conf/config.yaml" // 默认路径
+	}
+
 	fmt.Println("filePath: ", filePath)
 
 	viper.SetConfigFile(filePath)

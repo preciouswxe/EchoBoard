@@ -1,19 +1,19 @@
 package controller
 
 import (
-	"bluebell/dao/mysql"
-	"bluebell/logic"
-	"bluebell/models"
 	"errors"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/preciouswxe/EchoBoard_backend/dao/mysql"
+	"github.com/preciouswxe/EchoBoard_backend/logic"
+	"github.com/preciouswxe/EchoBoard_backend/models"
 	"go.uber.org/zap"
 )
 
 func SignUpHandler(c *gin.Context) {
 	// 1. 获取参数和参数校验
 	p := new(models.ParamSignUp)
-	if err := c.ShouldBindJSON(p) ; err != nil {
+	if err := c.ShouldBindJSON(p); err != nil {
 		// JSON 请求参数有误，直接返回响应
 		zap.L().Error("SignUp with invalid param", zap.Error(err))
 
@@ -30,7 +30,7 @@ func SignUpHandler(c *gin.Context) {
 	}
 
 	// 2. 业务处理
-	if err := logic.SignUp(p) ; err != nil {
+	if err := logic.SignUp(p); err != nil {
 		zap.L().Error("logic.SignUp failed", zap.Error(err))
 		// 错误分类比较
 		if errors.Is(err, mysql.ErrorUserNotExist) {
@@ -66,7 +66,7 @@ func LoginHandler(c *gin.Context) {
 	token, err := logic.Login(p)
 	if err != nil {
 		zap.L().Error("logic.login failed", zap.String("username", p.Username), zap.Error(err))
-		if errors.Is(err, mysql.ErrorUserNotExist){
+		if errors.Is(err, mysql.ErrorUserNotExist) {
 			ResponseError(c, CodeUserNotExist)
 			return
 		}

@@ -1,6 +1,13 @@
 # 项目启动命令
 
 
+```bash
+go run main.go
 ```
-go run main.go --filePath ./conf/config.yaml
+
+# 已配置热加载
+
+```bash
+air
 ```
+

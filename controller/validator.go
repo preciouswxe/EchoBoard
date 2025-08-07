@@ -1,8 +1,10 @@
 package controller
 
 import (
-	"bluebell/models"
 	"fmt"
+	"reflect"
+	"strings"
+
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/locales/en"
 	"github.com/go-playground/locales/zh"
@@ -10,8 +12,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	enTranslations "github.com/go-playground/validator/v10/translations/en"
 	zhTranslations "github.com/go-playground/validator/v10/translations/zh"
-	"reflect"
-	"strings"
+	"github.com/preciouswxe/EchoBoard_backend/models"
 )
 
 // 定义一个全局翻译器 T
@@ -24,7 +25,7 @@ func InitTrans(locale string) (err error) {
 
 		// 注册一个获取 json tag 的自定义方法
 		// 让验证错误信息使用的是自定义的 JSON 字段名, 而不是 Go 结构体的字段名
-		v.RegisterTagNameFunc( func(fld reflect.StructField) string {
+		v.RegisterTagNameFunc(func(fld reflect.StructField) string {
 			// 从字段的标签中取出 json 对应的值
 			// 切成最多两端, 取切割后的第一个元素
 			name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
@@ -37,7 +38,6 @@ func InitTrans(locale string) (err error) {
 
 		// 为SignUpParam注册自定义校验方法
 		v.RegisterStructValidation(SignUpParamStructLevelValidation, models.ParamSignUp{})
-
 
 		zhT := zh.New() // 中文翻译器
 		enT := en.New() // 英文翻译器
@@ -62,7 +62,7 @@ func InitTrans(locale string) (err error) {
 		case "zh":
 			err = zhTranslations.RegisterDefaultTranslations(v, trans)
 		default:
-			err = enTranslations.RegisterDefaultTranslations(v,trans)
+			err = enTranslations.RegisterDefaultTranslations(v, trans)
 		}
 		return
 	}
@@ -75,7 +75,7 @@ func removeTopStruct(fields map[string]string) map[string]string {
 	res := map[string]string{}
 	for field, err := range fields {
 		// 根据找到 . 然后把结构体名称去除
-		res[field[strings.Index(field, ".")+1 :]] = err
+		res[field[strings.Index(field, ".")+1:]] = err
 	}
 	return res
 }

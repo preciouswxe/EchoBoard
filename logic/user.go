@@ -5,17 +5,17 @@ import (
 	"strconv"
 	"time"
 
-	"bluebell/dao/mysql"
-	"bluebell/dao/redis"
-	"bluebell/models"
-	"bluebell/pkg/jwt"
-	"bluebell/pkg/snowflake"
+	"github.com/preciouswxe/EchoBoard_backend/dao/mysql"
+	"github.com/preciouswxe/EchoBoard_backend/dao/redis"
+	"github.com/preciouswxe/EchoBoard_backend/models"
+	"github.com/preciouswxe/EchoBoard_backend/pkg/jwt"
+	"github.com/preciouswxe/EchoBoard_backend/pkg/snowflake"
 )
 
 // SignUp 用户注册
 func SignUp(p *models.ParamSignUp) (err error) {
 	// 1. 判断用户存不存在
-	if err = mysql.CheckUserExist(p.Username) ; err != nil {
+	if err = mysql.CheckUserExist(p.Username); err != nil {
 		return err
 	}
 
@@ -23,7 +23,7 @@ func SignUp(p *models.ParamSignUp) (err error) {
 	userID := snowflake.GenID()
 	// 构造一个 User 实例
 	user := &models.User{
-		UserID: userID,
+		UserID:   userID,
 		Username: p.Username,
 		Password: p.Password,
 	}
@@ -58,13 +58,12 @@ func Login(p *models.ParamLogin) (token string, err error) {
 		key,
 		token,
 		time.Hour*1,
-		).Err()
+	).Err()
 	if err != nil {
 		return "", err
 	}
 
-
-	return token ,nil
+	return token, nil
 }
 
 // Logout 用户退出

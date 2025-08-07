@@ -1,9 +1,9 @@
 package logger
 
 import (
-	"bluebell/setting"
 	"github.com/gin-gonic/gin"
 	"github.com/natefinch/lumberjack"
+	"github.com/preciouswxe/EchoBoard_backend/setting"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -42,8 +42,8 @@ func Init(cfg *setting.LogConfig, mode string) (err error) {
 		core = zapcore.NewTee(
 			zapcore.NewCore(encoder, writeSyncer, l),
 			zapcore.NewCore(consoleEncoder, zapcore.Lock(os.Stdout), zapcore.DebugLevel),
-			)
-	}else {
+		)
+	} else {
 		// 其他只输出到文件
 		core = zapcore.NewCore(encoder, writeSyncer, l)
 	}
