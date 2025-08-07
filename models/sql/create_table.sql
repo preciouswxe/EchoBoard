@@ -34,3 +34,25 @@ INSERT INTO `community` VALUES ('3','3','CS:Go','Rush B...','2018-08-07 20:30:10
 INSERT INTO `community` VALUES ('4','4','LOL','欢迎来到英雄联盟！','2016-01-01 08:00:00','2016-01-01 08:00:00');
 
 
+
+DROP TABLE IF EXISTS `post`;
+
+# PRIMARY KEY：主键，唯一标识一行记录，自动建立唯一索引
+# UNIQUE KEY：唯一索引，列的值必须唯一（可用于非主键约束）
+# KEY（或 INDEX）：普通索引，加快某列的查询速度
+
+CREATE TABLE `post` (
+                        `id` BIGINT(20) NOT NULL AUTO_INCREMENT,
+                        `post_id` BIGINT(20) NOT NULL COMMENT '帖子id',
+                        `title` VARCHAR(128) COLLATE utf8mb4_general_ci NOT NULL COMMENT '标题',
+                        `content` VARCHAR(8192) COLLATE utf8mb4_general_ci NOT NULL COMMENT '内容',
+                        `author_id` BIGINT(20) NOT NULL COMMENT '作者的用户id',
+                        `community_id` BIGINT(20) NOT NULL COMMENT '所属社区',
+                        `status` tinyint(4) NOT NULL DEFAULT '1' COMMENT '帖子状态',
+                        `create_time` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                        `update_time` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+                        PRIMARY KEY (`id`),
+                        UNIQUE KEY `idx_post_id` (`post_id`),
+                        KEY `idx_author_id` (`author_id`),
+                        KEY `idx_community_id` (`community_id`)
+)ENGINE=INNODB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

@@ -16,7 +16,7 @@ const (
 )
 
 var codeMsgMap = map[ResCode]string{
-	CodeSuccess:         "success",
+	CodeSuccess:         "操作成功",
 	CodeInvalidParam:    "请求参数错误",
 	CodeUserExist:       "用户名已存在",
 	CodeUserNotExist:    "用户名不存在",
@@ -36,6 +36,3 @@ func (c ResCode) Msg() string {
 	}
 	return msg
 }
-
-
-
