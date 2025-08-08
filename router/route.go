@@ -5,6 +5,7 @@ import (
 	"github.com/preciouswxe/EchoBoard_backend/controller"
 	"github.com/preciouswxe/EchoBoard_backend/logger"
 	"github.com/preciouswxe/EchoBoard_backend/middlewares"
+	"net/http"
 )
 
 func SetupRouter(mode string) *gin.Engine {
@@ -30,20 +31,14 @@ func SetupRouter(mode string) *gin.Engine {
 		v1.GET("/community/:id", controller.CommunityDetailHandler)
 		v1.POST("/post", controller.CreatePostHandler)
 		v1.GET("/post/:id", controller.GetPostDetailHandler)
+		v1.GET("/posts/", controller.GetPostListHandler)
 	}
 
-	//r.GET("/ping", middlewares.JWTAuthMiddleware(), func(c *gin.Context) {
-	//	// 如果是登陆的用户，判断请求头中是否有 JWT
-	//	c.String(http.StatusOK, "pong!")
-	//
-	//})
-	//
-	//
-	//r.NoRoute(func(c *gin.Context) {
-	//	c.JSON(http.StatusOK, gin.H{
-	//		"msg": "404",
-	//	})
-	//})
+	r.NoRoute(func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"msg": "404",
+		})
+	})
 
 	return r
 }
