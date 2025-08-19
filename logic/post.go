@@ -2,6 +2,7 @@ package logic
 
 import (
 	"github.com/preciouswxe/EchoBoard_backend/dao/mysql"
+	"github.com/preciouswxe/EchoBoard_backend/dao/redis"
 	"github.com/preciouswxe/EchoBoard_backend/models"
 	"github.com/preciouswxe/EchoBoard_backend/pkg/snowflake"
 	"go.uber.org/zap"
@@ -11,7 +12,13 @@ func CreatePost(p *models.Post) (err error) {
 	// 生成 post_id
 	p.ID = snowflake.GenID()
 	// 保存到数据库 返回
-	return mysql.CreatePost(p)
+	err = mysql.CreatePost(p)
+	if err != nil {
+		return err
+	}
+	// redis 记录帖子创建时间
+	err = redis.CreatePost(p.ID)
+	return
 }
 
 func GetPostById(postID int64) (data *models.ApiPostDetail, err error) {

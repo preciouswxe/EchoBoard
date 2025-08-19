@@ -14,9 +14,9 @@ import (
 */
 
 type ResponseData struct {
-	Code	ResCode		`json:"code"`
-	Msg		interface{}	`json:"message"`
-	Data	interface{} `json:"data"`
+	Code ResCode     `json:"code"`
+	Msg  interface{} `json:"message"`
+	Data interface{} `json:"data,omitempty"`
 }
 
 // ResponseError 响应错误

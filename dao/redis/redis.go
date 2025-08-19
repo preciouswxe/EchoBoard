@@ -8,10 +8,13 @@ import (
 	"github.com/preciouswxe/EchoBoard_backend/setting"
 )
 
-var rdb *redis.Client
+var (
+	client *redis.Client
+	Nil    = redis.Nil
+)
 
 func Init(cfg *setting.RedisConfig) (err error) {
-	rdb = redis.NewClient(&redis.Options{
+	client = redis.NewClient(&redis.Options{
 		Addr: fmt.Sprintf("%s:%d",
 			cfg.Host,
 			cfg.Port,
@@ -23,7 +26,7 @@ func Init(cfg *setting.RedisConfig) (err error) {
 
 	// redis v8 正确用法：传 context
 	ctx := context.Background()
-	_, err = rdb.Ping(ctx).Result()
+	_, err = client.Ping(ctx).Result()
 	if err != nil {
 		return fmt.Errorf("failed to initialize Redis client: %v", err)
 	}
@@ -32,9 +35,9 @@ func Init(cfg *setting.RedisConfig) (err error) {
 
 func Close() {
 	// 不暴露 db 变量，用函数
-	_ = rdb.Close()
+	_ = client.Close()
 }
 
 func GetClient() *redis.Client {
-	return rdb
+	return client
 }

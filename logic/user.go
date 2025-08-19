@@ -35,20 +35,20 @@ func SignUp(p *models.ParamSignUp) (err error) {
 }
 
 // Login 用户登录
-func Login(p *models.ParamLogin) (token string, err error) {
-	user := &models.User{
+func Login(p *models.ParamLogin) (user *models.User, err error) {
+	user = &models.User{
 		Username: p.Username,
 		Password: p.Password,
 	}
 	// 传递的是指针，就能拿到 user.UserID
 	if err := mysql.Login(user); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// 生成 JWT token
-	token, err = jwt.GenToken(user.UserID, user.Username)
+	token, err := jwt.GenToken(user.UserID, user.Username)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// 存入 redis, 覆盖之前的 token（单端登录关键）
@@ -60,10 +60,11 @@ func Login(p *models.ParamLogin) (token string, err error) {
 		time.Hour*1,
 	).Err()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return token, nil
+	user.Token = token
+	return user, nil
 }
 
 // Logout 用户退出

@@ -1,11 +1,12 @@
 package controller
 
 import (
+	"strconv"
+
 	"github.com/gin-gonic/gin"
 	"github.com/preciouswxe/EchoBoard_backend/logic"
 	"github.com/preciouswxe/EchoBoard_backend/models"
 	"go.uber.org/zap"
-	"strconv"
 )
 
 // CreatePostHandler 创建帖子
