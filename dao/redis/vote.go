@@ -37,6 +37,7 @@ const (
 
 var (
 	ErrVoteTimeExpire = errors.New("投票时间已过")
+	ErrVoteRepeated   = errors.New("不允许重复投票")
 )
 
 // CreatePost 加入创建帖子的时间和分数
@@ -76,6 +77,12 @@ func VoteForPost(userID, postID string, value float64) error {
 	// 2.更新帖子的分数
 	// 先查询当前用户对当前帖子的投票记录
 	ovalue := client.ZScore(ctx, getRedisKey(KeyPostVotedZSetPF+postID), userID).Val()
+
+	// 如果这一次投票的值和之前保存的值一致，就提示不允许重复
+	if value == ovalue {
+		return ErrVoteRepeated
+	}
+
 	var dir float64
 	if value > ovalue {
 		dir = 1
