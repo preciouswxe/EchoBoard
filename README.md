@@ -2,7 +2,7 @@
 
 ## 技术栈
 
-Go 1.24 + Gin + SQLX + MySQL + Redis + JWT + Zap + Viper + Snowflake + fsnotify + validator + TOML + YAML
+Go 1.24 + Gin + SQLX + MySQL + Redis + JWT + Zap + Viper + Snowflake + validator 
 
 
 ## 项目启动命令

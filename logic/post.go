@@ -106,3 +106,57 @@ func GetPostList(page, size int64) (data []*models.ApiPostDetail, err error) {
 
 	return
 }
+
+func GetPostList2(p *models.ParamPostList) (data []*models.ApiPostDetail, err error) {
+	// 去 redis 查询 id 列表
+	ids, err := redis.GetPostIDsInOrder(p)
+	if err != nil {
+		return
+	}
+	if len(ids) == 0 {
+		zap.L().Warn("redis.GetPostIDsInOrder(p) return 0 data")
+		return
+	}
+
+	// 根据 id 去数据库查询帖子详细信息
+	// 返回的数据还要按照给定的 id 的顺序返回
+	posts, err := mysql.GetPostListByIDs(ids)
+	if err != nil {
+		return
+	}
+
+	// 列表需要循环读出具体信息
+	for _, post := range posts {
+		// 根据作者 id 查询作者信息
+		user, err := mysql.GetUserById(post.AuthorID)
+		if err != nil {
+			zap.L().Error("mysql.GetUserById(post.AuthorID) failed",
+				zap.Int64("author_id", post.AuthorID),
+				zap.Error(err),
+			)
+			continue
+		}
+
+		// 根据社区 id 查询社区详细信息
+		commnunityDetail, err := mysql.GetCommunityDetailByID(post.CommunityID)
+		if err != nil {
+			zap.L().Error("mysql.GetCommunityDetailByID(post.CommunityID) failed",
+				zap.Int64("community_id", post.CommunityID),
+				zap.Error(err),
+			)
+			continue
+		}
+
+		// 拼接
+		postdetail := &models.ApiPostDetail{
+			AuthorName:      user.Username,
+			Post:            post,
+			CommunityDetail: commnunityDetail,
+		}
+
+		// 添加到返回里
+		data = append(data, postdetail)
+	}
+
+	return
+}
