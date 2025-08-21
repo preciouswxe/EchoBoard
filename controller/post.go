@@ -10,6 +10,16 @@ import (
 )
 
 // CreatePostHandler 创建帖子
+// @Summary 创建帖子
+// @Description 根据传入 body 内容建帖
+// @Tags 帖子相关接口
+// @Accept application/json
+// @Produce application/json
+// @Param Authorization header string true "Bearer 用户 token 令牌"
+// @Param post body models.PostCreateRequest true "帖子参数（均必填）"
+// @Security ApiKeyAuth
+// @Success 200 {object} _ResponseCommon
+// @Router /api/v1/post [post]
 func CreatePostHandler(c *gin.Context) {
 	p := new(models.Post)
 	// 获取参数及参数校验 (validator)
@@ -38,9 +48,19 @@ func CreatePostHandler(c *gin.Context) {
 	ResponseSuccess(c, nil)
 }
 
-// GetPostDetailHandler 获取帖子详情
+// GetPostDetailHandler 获取单个帖子详情
+// @Summary 获取单个帖子详情接口
+// @Description 从 url 获取帖子 id 并返回单个帖子详情
+// @Tags 帖子相关接口
+// @Accept application/json
+// @Produce application/json
+// @Param Authorization header string true "Bearer 用户 token 令牌"
+// @Param id path int true "帖子 id"
+// @Security ApiKeyAuth
+// @Success 200 {object} _ResponsePostList
+// @Router /api/v1/post/{id} [get]
 func GetPostDetailHandler(c *gin.Context) {
-	// 获取参数（从 url 获取帖子 id ）
+	// 获取参数（从 url 路径直接获取帖子 id ）
 	postIDStr := c.Param("id")
 	postID, err := strconv.ParseInt(postIDStr, 10, 64)
 	if err != nil {
@@ -62,6 +82,17 @@ func GetPostDetailHandler(c *gin.Context) {
 }
 
 // GetPostListHandler 获取帖子列表
+// @Summary 获取帖子列表
+// @Description 从 url 获取帖子 id 并返回帖子详情
+// @Tags 帖子相关接口
+// @Accept application/json
+// @Produce application/json
+// @Param Authorization header string true "Bearer 用户 token 令牌"
+// @Param page query int false "页码，默认1"
+// @Param size query int false "页容量，默认10"
+// @Security ApiKeyAuth
+// @Success 200 {object} _ResponsePostList
+// @Router /api/v1/posts [get]
 func GetPostListHandler(c *gin.Context) {
 	// 获取分页参数
 	page, size := getPageInfo(c)
@@ -89,10 +120,13 @@ func GetPostListHandler(c *gin.Context) {
 // @Accept application/json
 // @Produce application/json
 // @Param Authorization header string true "Bearer 用户 token 令牌"
-// @Param object query models.ParamPostList false "查询参数"
+// @Param page query int false "页码，默认1"
+// @Param size query int false "页容量，默认10"
+// @Param order query string false "排序方式，time 或 score"
+// @Param community_id query int false "社区ID"
 // @Security ApiKeyAuth
 // @Success 200 {object} _ResponsePostList
-// @Router /posts2 [get]
+// @Router /api/v1/posts2 [get]
 func GetPostListHandler2(c *gin.Context) {
 	// GET 请求参数: /api/v1/post2?page=1&size=10&order=time
 	// 初始化结构体时指定初始参数

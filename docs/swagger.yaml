@@ -1,5 +1,43 @@
-basePath: /api/v1
+basePath: /
 definitions:
+  controller._ResponseCommon:
+    properties:
+      code:
+        allOf:
+        - $ref: '#/definitions/controller.ResCode'
+        description: 通用业务响应状态码
+      message:
+        description: 提示信息
+        type: string
+    type: object
+  controller._ResponseCommunityAllList:
+    properties:
+      code:
+        description: 业务响应状态码
+        type: integer
+      data:
+        description: 数据
+        items:
+          $ref: '#/definitions/models.Community'
+        type: array
+      message:
+        description: 提示信息
+        type: string
+    type: object
+  controller._ResponseCommunityDetailList:
+    properties:
+      code:
+        description: 业务响应状态码
+        type: integer
+      data:
+        description: 数据
+        items:
+          $ref: '#/definitions/models.CommunityDetail'
+        type: array
+      message:
+        description: 提示信息
+        type: string
+    type: object
   controller._ResponsePostList:
     properties:
       code:
@@ -11,6 +49,20 @@ definitions:
         items:
           $ref: '#/definitions/models.ApiPostDetail'
         type: array
+      message:
+        description: 提示信息
+        type: string
+    type: object
+  controller._ResponseUserLogin:
+    properties:
+      code:
+        allOf:
+        - $ref: '#/definitions/controller.ResCode'
+        description: 通用业务响应状态码
+      data:
+        allOf:
+        - $ref: '#/definitions/controller.UserLoginData'
+        description: 返回登陆的 token 等数据
       message:
         description: 提示信息
         type: string
@@ -37,6 +89,15 @@ definitions:
     - CodeNeedLogin
     - CodeInvalidToken
     - CodeNotSameDevice
+  controller.UserLoginData:
+    properties:
+      token:
+        type: string
+      user_id:
+        type: string
+      user_name:
+        type: string
+    type: object
   models.ApiPostDetail:
     properties:
       author_id:
@@ -66,6 +127,13 @@ definitions:
     - content
     - title
     type: object
+  models.Community:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
   models.CommunityDetail:
     properties:
       create_time:
@@ -77,38 +145,214 @@ definitions:
       name:
         type: string
     type: object
+  models.ParamLogin:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  models.ParamSignUp:
+    properties:
+      password:
+        type: string
+      re_password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - re_password
+    - username
+    type: object
+  models.ParamVoteData:
+    properties:
+      direction:
+        description: 赞成票(1) 反对票(-1) 取消投票(0)
+        enum:
+        - 1
+        - 0
+        - -1
+        example: "0"
+        type: string
+      post_id:
+        description: UserID 从请求中获取当前的用户
+        type: string
+    required:
+    - post_id
+    type: object
+  models.PostCreateRequest:
+    properties:
+      community_id:
+        type: integer
+      content:
+        type: string
+      title:
+        type: string
+    required:
+    - community_id
+    - content
+    - title
+    type: object
 host: 127.0.0.1:8081
 info:
-  contact: {}
+  contact:
+    email: wxe0750@qq.com
+    name: Lifridom
+    url: https://github.com/preciouswxe
   description: EchoBoard 是一个轻量级、高性能的用户论坛系统，支持用户注册、登录、发帖和评论功能。
   title: EchoBoard
   version: "1.0"
 paths:
-  /posts2:
+  /api/v1/community:
     get:
       consumes:
       - application/json
-      description: 可按社区按时间或分数排序查询帖子列表接口
+      description: 查询到所有的社区（community_id, community_name） 以列表形式返回
       parameters:
       - description: Bearer 用户 token 令牌
         in: header
         name: Authorization
         required: true
         type: string
-      - description: 社区 ID (可以为空)
-        in: query
-        name: community_id
-        type: integer
-      - description: 排序依据
-        example: score
-        in: query
-        name: order
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controller._ResponseCommunityAllList'
+      security:
+      - ApiKeyAuth: []
+      summary: 展示所有社区
+      tags:
+      - 社区相关接口
+  /api/v1/community/{id}:
+    get:
+      consumes:
+      - application/json
+      description: 根据社区 id 获取社区详情
+      parameters:
+      - description: Bearer 用户 token 令牌
+        in: header
+        name: Authorization
+        required: true
         type: string
-      - description: 页码
+      - description: 社区 id
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controller._ResponseCommunityDetailList'
+      security:
+      - ApiKeyAuth: []
+      summary: 社区分类详情
+      tags:
+      - 社区相关接口
+  /api/v1/login:
+    post:
+      consumes:
+      - application/json
+      description: 用户登录
+      parameters:
+      - description: 登陆参数：账号、密码（均必填）
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.ParamLogin'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controller._ResponseUserLogin'
+      summary: 用户登录
+      tags:
+      - 用户相关接口
+  /api/v1/post:
+    post:
+      consumes:
+      - application/json
+      description: 根据传入 body 内容建帖
+      parameters:
+      - description: Bearer 用户 token 令牌
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 帖子参数（均必填）
+        in: body
+        name: post
+        required: true
+        schema:
+          $ref: '#/definitions/models.PostCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controller._ResponseCommon'
+      security:
+      - ApiKeyAuth: []
+      summary: 创建帖子
+      tags:
+      - 帖子相关接口
+  /api/v1/post/{id}:
+    get:
+      consumes:
+      - application/json
+      description: 从 url 获取帖子 id 并返回单个帖子详情
+      parameters:
+      - description: Bearer 用户 token 令牌
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 帖子 id
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controller._ResponsePostList'
+      security:
+      - ApiKeyAuth: []
+      summary: 获取单个帖子详情接口
+      tags:
+      - 帖子相关接口
+  /api/v1/posts:
+    get:
+      consumes:
+      - application/json
+      description: 从 url 获取帖子 id 并返回帖子详情
+      parameters:
+      - description: Bearer 用户 token 令牌
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 页码，默认1
         in: query
         name: page
         type: integer
-      - description: 每页数据量
+      - description: 页容量，默认10
         in: query
         name: size
         type: integer
@@ -121,7 +365,97 @@ paths:
             $ref: '#/definitions/controller._ResponsePostList'
       security:
       - ApiKeyAuth: []
+      summary: 获取帖子列表
+      tags:
+      - 帖子相关接口
+  /api/v1/posts2:
+    get:
+      consumes:
+      - application/json
+      description: 可按社区按时间或分数排序查询帖子列表接口
+      parameters:
+      - description: Bearer 用户 token 令牌
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 页码，默认1
+        in: query
+        name: page
+        type: integer
+      - description: 页容量，默认10
+        in: query
+        name: size
+        type: integer
+      - description: 排序方式，time 或 score
+        in: query
+        name: order
+        type: string
+      - description: 社区ID
+        in: query
+        name: community_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controller._ResponsePostList'
+      security:
+      - ApiKeyAuth: []
       summary: 升级版帖子列表接口
+      tags:
+      - 帖子相关接口
+  /api/v1/signup:
+    post:
+      consumes:
+      - application/json
+      description: 用户注册
+      parameters:
+      - description: 注册参数：账号、密码（均必填）
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.ParamSignUp'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controller._ResponseCommon'
+      summary: 用户注册
+      tags:
+      - 用户相关接口
+  /api/v1/vote:
+    post:
+      consumes:
+      - application/json
+      description: 可按社区按时间或分数排序查询帖子列表接口
+      parameters:
+      - description: Bearer 用户 token 令牌
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 投票参数（均必填）
+        in: body
+        name: vote
+        required: true
+        schema:
+          $ref: '#/definitions/models.ParamVoteData'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controller._ResponseCommon'
+      security:
+      - ApiKeyAuth: []
+      summary: 投票
       tags:
       - 帖子相关接口
 swagger: "2.0"

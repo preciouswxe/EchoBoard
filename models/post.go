@@ -21,3 +21,17 @@ type ApiPostDetail struct {
 	*Post                               // 嵌入帖子结构体
 	*CommunityDetail `json:"community"` // 嵌入社区信息
 }
+
+/*
+	Request structs
+*/
+
+type PostCreateRequest struct {
+	CommunityID int64  `json:"community_id" binding:"required"`
+	Title       string `json:"title" binding:"required"`
+	Content     string `json:"content" binding:"required"`
+}
+
+/*
+	Response structs
+*/

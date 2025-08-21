@@ -10,6 +10,17 @@ import (
 
 // 投票
 
+// PostVoteController
+// @Summary 投票
+// @Description 可按社区按时间或分数排序查询帖子列表接口
+// @Tags 帖子相关接口
+// @Accept application/json
+// @Produce application/json
+// @Param Authorization header string true "Bearer 用户 token 令牌"
+// @Param vote body models.ParamVoteData true "投票参数（均必填）"
+// @Security ApiKeyAuth
+// @Success 200 {object} _ResponseCommon
+// @Router /api/v1/vote [post]
 func PostVoteController(c *gin.Context) {
 	// 参数校验
 	p := new(models.ParamVoteData)
