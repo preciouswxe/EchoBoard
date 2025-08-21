@@ -1,11 +1,16 @@
 package router
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/preciouswxe/EchoBoard_backend/controller"
 	"github.com/preciouswxe/EchoBoard_backend/logger"
 	"github.com/preciouswxe/EchoBoard_backend/middlewares"
-	"net/http"
+
+	_ "github.com/preciouswxe/EchoBoard_backend/docs"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func SetupRouter(mode string) *gin.Engine {
@@ -39,6 +44,8 @@ func SetupRouter(mode string) *gin.Engine {
 
 		v1.POST("/vote", controller.PostVoteController)
 	}
+
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	r.NoRoute(func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{

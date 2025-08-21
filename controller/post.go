@@ -83,6 +83,16 @@ func GetPostListHandler(c *gin.Context) {
 // 1. 获取 query string 参数
 // 2. 去 redis 查询 id 列表
 // 3. 根据 id 去数据库查询帖子详细信息
+// @Summary 升级版帖子列表接口
+// @Description 可按社区按时间或分数排序查询帖子列表接口
+// @Tags 帖子相关接口
+// @Accept application/json
+// @Produce application/json
+// @Param Authorization header string true "Bearer 用户 token 令牌"
+// @Param object query models.ParamPostList false "查询参数"
+// @Security ApiKeyAuth
+// @Success 200 {object} _ResponsePostList
+// @Router /posts2 [get]
 func GetPostListHandler2(c *gin.Context) {
 	// GET 请求参数: /api/v1/post2?page=1&size=10&order=time
 	// 初始化结构体时指定初始参数
