@@ -21,6 +21,7 @@ func CreatePost(p *models.Post) (err error) {
 	return
 }
 
+// GetPostById 根据帖子 id 查询帖子详情数据
 func GetPostById(postID int64) (data *models.ApiPostDetail, err error) {
 	// 获取帖子详情
 	post, err := mysql.GetPostById(postID)
@@ -61,6 +62,7 @@ func GetPostById(postID int64) (data *models.ApiPostDetail, err error) {
 	return
 }
 
+// GetPostList 获取帖子列表
 func GetPostList(page, size int64) (data []*models.ApiPostDetail, err error) {
 	// 获取一列帖子详情
 	posts, err := mysql.GetPostList(page, size)
@@ -168,7 +170,7 @@ func GetPostList2(p *models.ParamPostList) (data []*models.ApiPostDetail, err er
 	return
 }
 
-func GetCommunityPostList(p *models.ParamCommunityPostList) (data []*models.ApiPostDetail, err error) {
+func GetCommunityPostList(p *models.ParamPostList) (data []*models.ApiPostDetail, err error) {
 	// 去 redis 查询 id 列表
 	ids, err := redis.GetCommunityPostIDsInOrder(p)
 	if err != nil {
@@ -224,6 +226,26 @@ func GetCommunityPostList(p *models.ParamCommunityPostList) (data []*models.ApiP
 
 		// 添加到返回里
 		data = append(data, postdetail)
+	}
+
+	return
+}
+
+// GetPostListNew 将两个查询逻辑合二为一
+func GetPostListNew(p *models.ParamPostList) (data []*models.ApiPostDetail, err error) {
+	// 根据请求参数的不同，执行不同的逻辑
+
+	if p.CommunityID == 0 {
+		// 说明查询所有
+		data, err = GetPostList2(p)
+	} else {
+		// 根据社区 id 查询
+		data, err = GetCommunityPostList(p)
+	}
+
+	if err != nil {
+		zap.L().Error("GetPostListNew failed", zap.Error(err))
+		return nil, err
 	}
 
 	return

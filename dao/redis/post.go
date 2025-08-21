@@ -65,7 +65,7 @@ func GetPostVoteData(ids []string) (data []int64, err error) {
 
 // GetCommunityPostIDsInOrder 按社区查询 ids
 // 在 Redis 里动态生成「某个社区下的时间/分数排序帖子列表」，并做缓存（60 秒），然后分页返回帖子 ID。
-func GetCommunityPostIDsInOrder(p *models.ParamCommunityPostList) ([]string, error) {
+func GetCommunityPostIDsInOrder(p *models.ParamPostList) ([]string, error) {
 	ctx := context.Background()
 
 	orderKey := getRedisKey(KeyPostTimeZSet)
