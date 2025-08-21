@@ -4,7 +4,19 @@ import (
 	"context"
 	"github.com/go-redis/redis/v8"
 	"github.com/preciouswxe/EchoBoard_backend/models"
+	"strconv"
+	"time"
 )
+
+// getIDsFromKey 包内用于计算索引起始点
+func getIDsFromKey(key string, page, size int64) ([]string, error) {
+	start := (page - 1) * size
+	end := start + size - 1
+
+	// ZRevRange 按分数从大到小的顺序查询指定数量的元素
+	ctx := context.Background()
+	return client.ZRevRange(ctx, key, start, end).Result()
+}
 
 // GetPostIDsInOrder 按序从 redis 获取帖子 ID
 func GetPostIDsInOrder(p *models.ParamPostList) ([]string, error) {
@@ -16,12 +28,7 @@ func GetPostIDsInOrder(p *models.ParamPostList) ([]string, error) {
 	}
 
 	// 2.确定查询的索引起始点
-	start := (p.Page - 1) * p.Size
-	end := start + p.Size - 1
-
-	// 3. ZRevRange 按分数从大到小的顺序查询指定数量的元素
-	ctx := context.Background()
-	return client.ZRevRange(ctx, key, start, end).Result()
+	return getIDsFromKey(key, p.Page, p.Size)
 }
 
 // GetPostVoteData 根据 ids 查询每篇帖子的投赞成票的数据
@@ -54,4 +61,45 @@ func GetPostVoteData(ids []string) (data []int64, err error) {
 	}
 
 	return
+}
+
+// GetCommunityPostIDsInOrder 按社区查询 ids
+// 在 Redis 里动态生成「某个社区下的时间/分数排序帖子列表」，并做缓存（60 秒），然后分页返回帖子 ID。
+func GetCommunityPostIDsInOrder(p *models.ParamCommunityPostList) ([]string, error) {
+	ctx := context.Background()
+
+	orderKey := getRedisKey(KeyPostTimeZSet)
+	if p.Order == models.OrderScore {
+		orderKey = getRedisKey(KeyPostScoreZSet)
+	}
+
+	// 使用 zinterstore 把分区的帖子 set 与 帖子分数的 zset 生成一个新的 zset
+	// 针对新的 zset 按之前逻辑取数据
+
+	// 社区的 key
+	ckey := getRedisKey(KeyCommunitySetPF + strconv.Itoa(int(p.CommunityID)))
+
+	// 利用缓存 key 减少 zinterstore 执行的次数
+	key := orderKey + strconv.Itoa(int(p.CommunityID))
+
+	// 判断缓存是否存在
+	if client.Exists(ctx, key).Val() < 1 {
+		// 不存在该 key 需要计算
+		pipeline := client.Pipeline()
+		// zinterstore 聚合时选择两边最大值
+		pipeline.ZInterStore(ctx, key, &redis.ZStore{
+			Keys:      []string{ckey, orderKey}, // 交集：社区帖子 + 全局排序
+			Aggregate: "MAX",                    // 分数取最大（其实就是沿用全局的分数）
+		})
+		// 设置超时时间
+		pipeline.Expire(ctx, key, 60*time.Second)
+		// 拼接完后执行
+		_, err := pipeline.Exec(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// 存在的话直接根据 key 查询 ids
+	return getIDsFromKey(key, p.Page, p.Size)
 }

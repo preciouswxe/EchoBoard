@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/go-redis/redis/v8"
 	"math"
+	"strconv"
 	"time"
 )
 
@@ -41,7 +42,7 @@ var (
 )
 
 // CreatePost 加入创建帖子的时间和分数
-func CreatePost(postID int64) error {
+func CreatePost(postID, communityID int64) error {
 	ctx := context.Background()
 
 	pipeline := client.TxPipeline()
@@ -57,6 +58,10 @@ func CreatePost(postID int64) error {
 		Score:  float64(time.Now().Unix()),
 		Member: postID,
 	})
+
+	// 补充：把帖子 id 加到社区的 set
+	cKey := getRedisKey(KeyCommunitySetPF + strconv.Itoa(int(communityID)))
+	pipeline.SAdd(ctx, cKey, postID)
 
 	// 执行事务
 	_, err := pipeline.Exec(ctx)
