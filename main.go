@@ -24,7 +24,7 @@ import (
 
 // @title EchoBoard
 // @version 1.0
-// @description EchoBoard 是一个轻量级、高性能的用户论坛系统，支持用户注册、登录、发帖和评论功能。
+// @description EchoBoard 是一个轻量级、高性能的用户论坛系统，支持用户注册、登录和投票功能。
 
 // @contact.name Lifridom
 // @contact.url https://github.com/preciouswxe
@@ -100,11 +100,11 @@ func main() {
 	<-quit                                               // 阻塞在此，当接收到上述两种信号时才会往下执行
 	zap.L().Info("Shutdown Server ...")
 
-	// 创建一个5秒超时的context
+	// 创建一个 5 秒超时的 context
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// 5秒内优雅关闭服务（将未处理完的请求处理完再关闭服务），超过5秒就超时退出
+	// 5 秒内优雅关闭服务（将未处理完的请求处理完再关闭服务），超过5秒就超时退出
 	if err := srv.Shutdown(ctx); err != nil {
 		zap.L().Fatal("Server Shutdown ", zap.Error(err))
 	}

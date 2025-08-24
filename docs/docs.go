@@ -719,7 +719,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "EchoBoard",
-	Description:      "EchoBoard 是一个轻量级、高性能的用户论坛系统，支持用户注册、登录、发帖和评论功能。",
+	Description:      "EchoBoard 是一个轻量级、高性能的用户论坛系统，支持用户注册、登录和投票功能。",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

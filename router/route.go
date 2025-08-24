@@ -1,12 +1,12 @@
 package router
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/preciouswxe/EchoBoard_backend/controller"
 	"github.com/preciouswxe/EchoBoard_backend/logger"
 	"github.com/preciouswxe/EchoBoard_backend/middlewares"
+	"net/http"
+	"time"
 
 	_ "github.com/preciouswxe/EchoBoard_backend/docs"
 	swaggerFiles "github.com/swaggo/files"
@@ -20,7 +20,7 @@ func SetupRouter(mode string) *gin.Engine {
 
 	r := gin.New()
 
-	r.Use(logger.GinLogger(), logger.GinRecovery(true))
+	r.Use(logger.GinLogger(), logger.GinRecovery(true), middlewares.RateLimitMiddleware(2*time.Second, 10))
 
 	v1 := r.Group("/api/v1")
 

@@ -203,7 +203,7 @@ info:
     email: wxe0750@qq.com
     name: Lifridom
     url: https://github.com/preciouswxe
-  description: EchoBoard 是一个轻量级、高性能的用户论坛系统，支持用户注册、登录、发帖和评论功能。
+  description: EchoBoard 是一个轻量级、高性能的用户论坛系统，支持用户注册、登录和投票功能。
   title: EchoBoard
   version: "1.0"
 paths:
