@@ -69,3 +69,15 @@ Status code distribution:
   [200] 10 responses
   [429] 9990 responses
 ```
+
+## pprof 性能分析
+
+示例（内存篇）:
+
+```
+go tool pprof -inuse_space http://127.0.0.1:8081/debug/pprof/heap
+```
+
+![](photo/pprof_svgtojpg.jpg)
+
+注：可视化工具 [graphviz](https://graphviz.gitlab.io/)

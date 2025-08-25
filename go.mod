@@ -23,6 +23,8 @@ require (
 	go.uber.org/zap v1.27.0
 )
 
+require github.com/gin-contrib/pprof v1.5.3 // indirect
+
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/BurntSushi/toml v1.5.0 // indirect
