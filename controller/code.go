@@ -13,6 +13,7 @@ const (
 	CodeNeedLogin
 	CodeInvalidToken
 	CodeNotSameDevice
+	CodeVoteTimeOut
 )
 
 var codeMsgMap = map[ResCode]string{
@@ -26,6 +27,7 @@ var codeMsgMap = map[ResCode]string{
 	CodeNeedLogin:     "需要登录",
 	CodeInvalidToken:  "无效的token",
 	CodeNotSameDevice: "账号已在其他设备登陆",
+	CodeVoteTimeOut:   "投票已经结束",
 }
 
 func (c ResCode) Msg() string {
