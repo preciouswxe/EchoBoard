@@ -15,7 +15,7 @@ Go 1.24 + Gin + SQLX + MySQL + Redis + JWT + Zap + Viper + Snowflake + validator
 
 <br>
 
-![](photo/EchoBoard_show.gif)
+![EchoBoard项目演示动画gif](photo/EchoBoard_show0829.gif)
 
 
 ## 项目启动命令
