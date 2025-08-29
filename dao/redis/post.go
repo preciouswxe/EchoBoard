@@ -47,17 +47,21 @@ func GetPostVoteData(ids []string) (data []int64, err error) {
 	pipeline := client.Pipeline()
 	for _, id := range ids {
 		key := getRedisKey(KeyPostVotedZSetPF + id)
-		pipeline.ZCount(ctx, key, "1", "1")
+		pipeline.ZCount(ctx, key, "1", "1")   // 赞成票
+		pipeline.ZCount(ctx, key, "-1", "-1") // 反对票
 	}
 	cmders, err := pipeline.Exec(ctx)
 	if err != nil {
 		return
 	}
+
 	data = make([]int64, 0, len(ids))
-	for _, cmder := range cmders {
+	for i := 0; i < len(cmders); i += 2 {
 		// 转换成 int 类型
-		v := cmder.(*redis.IntCmd).Val()
-		data = append(data, v)
+		up := cmders[i].(*redis.IntCmd).Val()
+		down := cmders[i+1].(*redis.IntCmd).Val()
+		// 计算净票数
+		data = append(data, up-down)
 	}
 
 	return

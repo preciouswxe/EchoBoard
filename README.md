@@ -13,6 +13,11 @@ Go 1.24 + Gin + SQLX + MySQL + Redis + JWT + Zap + Viper + Snowflake + validator
 - 支持优雅关停，捕获系统信号并在超时内完成请求，确保服务平滑下线
 - 支持令牌桶限流中间件
 
+<br>
+
+![](photo/EchoBoard_show.gif)
+
+
 ## 项目启动命令
 
 
@@ -72,7 +77,7 @@ Status code distribution:
 
 ## pprof 性能分析
 
-示例（内存篇）:
+示例（内存篇 配合压测）:
 
 ```
 go tool pprof -inuse_space http://127.0.0.1:8081/debug/pprof/heap

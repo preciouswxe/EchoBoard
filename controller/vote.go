@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"github.com/preciouswxe/EchoBoard_backend/logic"
@@ -27,6 +28,7 @@ func PostVoteController(c *gin.Context) {
 	if err := c.ShouldBindJSON(p); err != nil {
 		errs, ok := err.(validator.ValidationErrors) // 类型断言判断错误
 		if !ok {
+			zap.L().Error("validator.ValidationErrors: ", zap.Error(errs))
 			ResponseError(c, CodeInvalidParam)
 			return
 		}
@@ -43,7 +45,16 @@ func PostVoteController(c *gin.Context) {
 	// 具体投票的业务逻辑
 	if err := logic.VoteForPost(userID, p); err != nil {
 		zap.L().Error("logic.VoteForPost() failed", zap.Error(err))
-		ResponseError(c, CodeServerBusy)
+
+		switch {
+		case errors.Is(err, logic.ErrVoteRepeated):
+			ResponseErrorWithMsg(c, CodeInvalidParam, err.Error())
+		case errors.Is(err, logic.ErrVoteTimeExpire):
+			ResponseErrorWithMsg(c, CodeInvalidParam, err.Error())
+		default:
+			ResponseError(c, CodeServerBusy)
+		}
+
 		return
 	}
 

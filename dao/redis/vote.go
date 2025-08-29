@@ -2,8 +2,8 @@ package redis
 
 import (
 	"context"
-	"errors"
 	"github.com/go-redis/redis/v8"
+	"go.uber.org/zap"
 	"math"
 	"strconv"
 	"time"
@@ -36,11 +36,6 @@ const (
 	scorePerVote     = 432 // 每一票分数值
 )
 
-var (
-	ErrVoteTimeExpire = errors.New("投票时间已过")
-	ErrVoteRepeated   = errors.New("不允许重复投票")
-)
-
 // CreatePost 加入创建帖子的时间和分数
 func CreatePost(postID, communityID int64) error {
 	ctx := context.Background()
@@ -69,14 +64,14 @@ func CreatePost(postID, communityID int64) error {
 }
 
 // VoteForPost 为帖子投票
-func VoteForPost(userID, postID string, value float64) error {
+func VoteForPost(userID, postID string, value float64) (string, error) {
 	ctx := context.Background()
 
 	// 1.判断投票限制
 	// 去 redis 取帖子发布时间 (判定是否还在一周内)
 	postTime := client.ZScore(ctx, getRedisKey(KeyPostTimeZSet), postID).Val()
 	if float64(time.Now().Unix())-postTime > oneWeekInSeconds {
-		return ErrVoteTimeExpire
+		return "time_expired", nil
 	}
 
 	// 2.更新帖子的分数
@@ -84,25 +79,26 @@ func VoteForPost(userID, postID string, value float64) error {
 	ovalue := client.ZScore(ctx, getRedisKey(KeyPostVotedZSetPF+postID), userID).Val()
 
 	// 如果这一次投票的值和之前保存的值一致，就提示不允许重复
-	if value == ovalue {
-		return ErrVoteRepeated
+	if (value > 0 && ovalue > 0) || (value < 0 && ovalue < 0) || (value == 0 && ovalue == 0) {
+		zap.L().Debug("repeat to vote same direction:", zap.Float64("value ", value), zap.Float64("ovalue ", ovalue))
+		return "repeated", nil
 	}
 
-	var dir float64
-	if value > ovalue {
-		dir = 1
-	} else {
-		dir = -1
-	}
 	// 计算两次投票的差值
-	diff := math.Abs(ovalue - value)
+	var diff float64
+	diff = ovalue - value
+	// 如果是取消投票的情况，则先回到 0
+	if math.Abs(ovalue) == 1 {
+		diff = 1
+		value = 0
+	}
 
 	// 更新和记录需要放到同一个 pipeline 事务中操作
 	// 启动事务
 	pipeline := client.TxPipeline()
 
 	// 更新分数
-	pipeline.ZIncrBy(ctx, getRedisKey(KeyPostScoreZSet), dir*diff*scorePerVote, postID)
+	pipeline.ZIncrBy(ctx, getRedisKey(KeyPostScoreZSet), diff*scorePerVote, postID)
 
 	// 3.记录用户为该帖子投票的数据
 	if value == 0 {
@@ -115,5 +111,5 @@ func VoteForPost(userID, postID string, value float64) error {
 	}
 
 	_, err := pipeline.Exec(ctx)
-	return err
+	return "ok", err
 }
