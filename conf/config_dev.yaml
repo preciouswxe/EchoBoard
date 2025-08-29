@@ -1,7 +1,7 @@
 app:
   name: "web_app"
   mode: "dev"
-  host: "0.0.0.0"
+  host: "127.0.0.1"
   port: 8081
   version: "v0.1.26"
   start_time: "2025-07-26"
@@ -15,7 +15,7 @@ log:
   max_age: 30
   max_backups: 7
 mysql:
-  host: host.docker.internal
+  host: "127.0.0.1"
   port: 3306
   user: "root"
   password: "wxe13867187633"
@@ -23,7 +23,7 @@ mysql:
   max_open_conns: 200
   max_idle_conns: 50
 redis:
-  host: redisdb
+  host: "127.0.0.1"
   port: 6379
   password: ""
   db: 0

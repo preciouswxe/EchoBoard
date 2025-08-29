@@ -23,8 +23,17 @@ func SetupRouter(mode string) *gin.Engine {
 
 	r.Use(logger.GinLogger(), logger.GinRecovery(true), middlewares.RateLimitMiddleware(2*time.Second, 10))
 
-	v1 := r.Group("/api/v1")
+	// 加载静态文件
+	r.LoadHTMLFiles("./templates/index.html")
+	// 让 html 里的引用都映射到根目录下的 static
+	r.Static("/static", "./static")
+	// 前端展示页
+	r.GET("/", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "index.html", nil)
+	})
 
+	// 后端路由组
+	v1 := r.Group("/api/v1")
 	// 注册
 	v1.POST("/signup", controller.SignUpHandler)
 	// 登录
