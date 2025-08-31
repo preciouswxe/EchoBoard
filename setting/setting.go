@@ -74,7 +74,7 @@ func Init() (err error) {
 
 	filePath := os.Getenv("CONFIG_PATH")
 	if filePath == "" {
-		filePath = "conf/config_dev.yaml" // 可根据 yaml 文件切换
+		filePath = "conf/config.yaml" // 可根据 yaml 文件切换
 	}
 
 	fmt.Println("filePath: ", filePath)

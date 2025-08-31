@@ -2,20 +2,26 @@
 
 ## 技术栈
 
-Go 1.24 + Gin + SQLX + MySQL + Redis + JWT + Zap + Viper + Snowflake + validator + swagger 
+Go 1.24 + Gin + SQLX + MySQL + Redis + JWT + Zap + Viper + Snowflake + validator + swagger + fsnotify + Docker&Compose + pprof
 
 ## 功能亮点
-- 用户注册 / 登录与基于 JWT 的 Token 管理
-- 帖子投票系统，支持 Redis 缓存
-- 配置热加载和日志管理
-- 基于雪花算法分布式 ID 生成 (Snowflake)
-- 支持 Redis pipeline 批量读写提高性能
-- 支持优雅关停，捕获系统信号并在超时内完成请求，确保服务平滑下线
-- 支持令牌桶限流中间件
+
+### 业务
+- 用户注册/登录，基于 JWT 管理 Token
+- 帖子投票系统，Redis 缓存加速
+- 配置热加载 & 日志管理
+- 分布式 ID 生成 (Snowflake)
+- Redis pipeline 批量读写提升性能
+- 优雅关停，捕获系统信号确保平滑下线
+- 令牌桶限流中间件控制高并发
+
+### 部署
+- Redis RDB 持久化，容器重启数据不丢失
+- Docker Compose 容器化，一键启动 & 端口映射
 
 <br>
 
-![EchoBoard项目演示动画gif](photo/EchoBoard_show0829.gif)
+![EchoBoard项目演示动画gif](static/markdown_photo/EchoBoard_show0829.gif)
 
 
 ## 项目启动命令
@@ -83,6 +89,6 @@ Status code distribution:
 go tool pprof -inuse_space http://127.0.0.1:8081/debug/pprof/heap
 ```
 
-![](photo/pprof_svgtojpg.jpg)
+![](static/markdown_photo/pprof_svgtojpg.jpg)
 
 注：可视化工具 [graphviz](https://graphviz.gitlab.io/)
