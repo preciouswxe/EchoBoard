@@ -31,6 +31,8 @@ Go 1.24 + Gin + SQLX + MySQL + Redis + JWT + Zap + Viper + Snowflake + validator
 go run main.go
 ```
 
+tips: 启动前确保根目录下`/conf/config.yaml` `/conf/config_dev.yaml` 配置齐。
+
 ## 已配置热加载启动
 
 ```bash
