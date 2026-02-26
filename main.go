@@ -9,6 +9,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/preciouswxe/EchoBoard_backend/pkg/es"
+	"github.com/spf13/viper"
+	"go.uber.org/zap"
+
 	"github.com/preciouswxe/EchoBoard_backend/controller"
 	"github.com/preciouswxe/EchoBoard_backend/dao/mysql"
 	"github.com/preciouswxe/EchoBoard_backend/dao/redis"
@@ -16,8 +20,6 @@ import (
 	"github.com/preciouswxe/EchoBoard_backend/pkg/snowflake"
 	"github.com/preciouswxe/EchoBoard_backend/router"
 	"github.com/preciouswxe/EchoBoard_backend/setting"
-	"github.com/spf13/viper"
-	"go.uber.org/zap"
 )
 
 // Go Web 开发较通用的脚手架模板
@@ -32,6 +34,7 @@ import (
 
 // @host 127.0.0.1:8081
 // @BasePath /
+
 func main() {
 	// 1. 加载配置文件
 	if err := setting.Init(); err != nil {
@@ -60,6 +63,11 @@ func main() {
 		return
 	}
 	defer redis.Close()
+
+	if err := es.Init(setting.Conf.EsConfig); err != nil {
+		fmt.Printf("init elasticsearch failed, err:%v\n", err)
+		return
+	}
 
 	// 5. 加载雪花算法
 	if err := snowflake.Init(setting.Conf.AppConfig.StartTime, setting.Conf.AppConfig.MachineID); err != nil {

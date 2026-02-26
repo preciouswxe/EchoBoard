@@ -67,14 +67,14 @@ func CreatePost(postID, communityID int64) error {
 func VoteForPost(userID, postID string, value float64) (string, error) {
 	ctx := context.Background()
 
-	// 1.判断投票限制
+	// 判断投票限制
 	// 去 redis 取帖子发布时间 (判定是否还在一周内)
 	postTime := client.ZScore(ctx, getRedisKey(KeyPostTimeZSet), postID).Val()
 	if float64(time.Now().Unix())-postTime > oneWeekInSeconds {
 		return "time_expired", nil
 	}
 
-	// 2.更新帖子的分数
+	// 更新帖子的分数
 	// 先查询当前用户对当前帖子的投票记录
 	ovalue := client.ZScore(ctx, getRedisKey(KeyPostVotedZSetPF+postID), userID).Val()
 
@@ -87,7 +87,7 @@ func VoteForPost(userID, postID string, value float64) (string, error) {
 	// 计算两次投票的差值
 	var diff float64
 	diff = ovalue - value
-	// 如果是取消投票的情况，则先回到 0
+	// 如果是取消投票的情况，则令 value=0 表明移除该投票纪录
 	if math.Abs(ovalue) == 1 {
 		diff = 1
 		value = 0
@@ -100,9 +100,9 @@ func VoteForPost(userID, postID string, value float64) (string, error) {
 	// 更新分数
 	pipeline.ZIncrBy(ctx, getRedisKey(KeyPostScoreZSet), diff*scorePerVote, postID)
 
-	// 3.记录用户为该帖子投票的数据
+	// 记录用户为该帖子投票的数据
 	if value == 0 {
-		pipeline.ZRem(ctx, getRedisKey(KeyPostVotedZSetPF+postID), userID).Result()
+		_, _ = pipeline.ZRem(ctx, getRedisKey(KeyPostVotedZSetPF+postID), userID).Result()
 	} else {
 		pipeline.ZAdd(ctx, getRedisKey(KeyPostVotedZSetPF+postID), &redis.Z{
 			Score:  value,
@@ -111,5 +111,13 @@ func VoteForPost(userID, postID string, value float64) (string, error) {
 	}
 
 	_, err := pipeline.Exec(ctx)
+
+	zap.L().Info("[Redis Vote]",
+		zap.String("userID:", userID),
+		zap.String("postID:", postID),
+		zap.Float64("diff", diff),
+		zap.Float64("value:", value),
+		)
+
 	return "ok", err
 }

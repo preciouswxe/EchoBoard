@@ -68,9 +68,11 @@ func GetPostDetailHandler(c *gin.Context) {
 		ResponseError(c, CodeInvalidParam)
 		return
 	}
+	// 获取当前登录的用户 ID，用于查询与帖子的点赞收藏关系
+	userID, _ := getCurrentUser(c)
 
 	// 根据 id 取出帖子数据
-	data, err := logic.GetPostById(postID)
+	data, err := logic.GetPostById(postID, userID)
 	if err != nil {
 		zap.L().Error("logic.GetPostById(postID) failed", zap.Error(err))
 		ResponseError(c, CodeServerBusy)
@@ -145,8 +147,11 @@ func GetPostListHandler2(c *gin.Context) {
 		return
 	}
 
+	// 获取当前登录的用户 ID，用于查询与帖子的点赞收藏关系
+	userID, _ := getCurrentUser(c)
+
 	// 获取数据
-	data, err := logic.GetPostListNew(p)
+	data, err := logic.GetPostListNew(p, userID)
 
 	if err != nil {
 		zap.L().Error("logic.GetPostList() failed", zap.Error(err))
@@ -155,6 +160,40 @@ func GetPostListHandler2(c *gin.Context) {
 	}
 
 	// 返回响应
+	ResponseSuccess(c, data)
+}
+
+// GetPostsBySearchHandler 搜索获取符合关键词的帖子
+// @Summary 搜索获取符合关键词接口
+// @Description 从 url 获取 key_word 并返回符合的帖子列表（另起一页）
+// @Tags 帖子相关接口
+// @Accept application/json
+// @Produce application/json
+// @Param Authorization header string true "Bearer 用户 token 令牌"
+// @Param id path int true "帖子 id"
+// @Security ApiKeyAuth
+// @Success 200 {object}
+// @Router /api/v1/posts/search [get]
+func GetPostsBySearchHandler(c *gin.Context) {
+	// GET 请求参数: /api/v1/posts/search?key_word=xxx&page=1&size=10
+	p := &models.ParamSearchPostList{
+		// 给默认值，防止 page/size 为 0
+		Page: 1,
+		Size: 20,
+	}
+	if err := c.ShouldBindQuery(p); err != nil {
+		zap.L().Error("GetPostsBySearchHandler with invalid params", zap.Error(err))
+		ResponseError(c, CodeInvalidParam)
+		return
+	}
+	// 根据关键词取出符合的帖子列表
+	data, err := logic.GetPostListBySearch(p)
+	if err != nil {
+		zap.L().Error("logic.GetPostListBySearch failed", zap.Error(err))
+		ResponseError(c, CodeServerBusy)
+		return
+	}
+
 	ResponseSuccess(c, data)
 }
 

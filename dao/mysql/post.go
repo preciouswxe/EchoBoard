@@ -1,9 +1,10 @@
 package mysql
 
 import (
+	"strings"
+
 	"github.com/jmoiron/sqlx"
 	"github.com/preciouswxe/EchoBoard_backend/models"
-	"strings"
 )
 
 // CreatePost 创建帖子
@@ -44,7 +45,8 @@ func GetPostList(page, size int64) (posts []*models.Post, err error) {
 
 // GetPostListByIDs 根据给定的 id 列表查询帖子数据
 func GetPostListByIDs(ids []string) (postList []*models.Post, err error) {
-	sqlStr := `select post_id, title, content, author_id, community_id, create_time
+	sqlStr := `select 
+    post_id, title, content, author_id, community_id, create_time
 	from post
 	where post_id in (?)
 	order by  FIND_IN_SET(post_id, ?)
@@ -59,5 +61,18 @@ func GetPostListByIDs(ids []string) (postList []*models.Post, err error) {
 	query = db.Rebind(query)
 
 	err = db.Select(&postList, query, args...)
+	return
+}
+
+// GetPostListByKeyWord 根据用户输入关键词搜索相关帖子（可优化推荐）
+func GetPostListByKeyWord(keyWord string, page, size int64) (postList []*models.Post, err error) {
+	sqlStr := `select 
+	post_id, title, content, author_id, community_id, create_time
+	from post
+	where title like ?
+	or content like ?
+	limit ?, ?`
+	postList = make([]*models.Post, 0, 2)
+	err = db.Select(&postList, sqlStr, "%"+keyWord+"%", "%"+keyWord+"%", (page-1)*size, size)
 	return
 }

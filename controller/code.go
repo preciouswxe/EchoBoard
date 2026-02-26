@@ -25,7 +25,7 @@ var codeMsgMap = map[ResCode]string{
 	CodeServerBusy:      "服务繁忙",
 
 	CodeNeedLogin:     "需要登录",
-	CodeInvalidToken:  "无效的token",
+	CodeInvalidToken:  "无效的 token",
 	CodeNotSameDevice: "账号已在其他设备登陆",
 	CodeVoteTimeOut:   "投票已经结束",
 }

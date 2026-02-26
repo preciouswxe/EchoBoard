@@ -2,9 +2,10 @@ package setting
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
-	"os"
 )
 
 // Conf 全局变量，用于保存程序的所有配置信息
@@ -15,6 +16,7 @@ type multipleConfig struct {
 	*LogConfig   `mapstructure:"log"`
 	*MySQLConfig `mapstructure:"mysql"`
 	*RedisConfig `mapstructure:"redis"`
+	*EsConfig	 `mapstructure:"es"`
 }
 
 type AppConfig struct {
@@ -52,6 +54,11 @@ type RedisConfig struct {
 	PoolSize int    `mapstructure:"pool_size"`
 }
 
+type EsConfig struct {
+	Host string `mapstructure:"host"`
+	Port int 	`mapstructure:"port"`
+}
+
 func Init() (err error) {
 	// 方式 1: 直接指定配置文件路径（相对路径或者绝对路径）
 	// 相对路径：相对执行的可执行文件的相对路径
@@ -74,7 +81,7 @@ func Init() (err error) {
 
 	filePath := os.Getenv("CONFIG_PATH")
 	if filePath == "" {
-		filePath = "conf/config.yaml" // 可根据 yaml 文件切换
+		filePath = "conf/config_dev.yaml" // 可根据 yaml 文件切换
 	}
 
 	fmt.Println("filePath: ", filePath)

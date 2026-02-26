@@ -35,6 +35,13 @@ type ParamPostList struct {
 	Order       string `json:"order" form:"order" example:"score"` // 排序依据
 }
 
+// ParamSearchPostList 搜索获取帖子列表  [GET]
+type ParamSearchPostList struct {
+	KeyWord		string `json:"key_word" form:"key_word" binding:"required"`
+	Page        int64  `json:"page" form:"page"`                   // 页码
+	Size        int64  `json:"size" form:"size"`                   // 每页数据量
+}
+
 // ParamCommunityPostList 按社区获取帖子列表 query string 参数  [GET]
 //type ParamCommunityPostList struct {
 //	*ParamPostList

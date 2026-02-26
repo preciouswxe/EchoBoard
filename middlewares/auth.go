@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/preciouswxe/EchoBoard_backend/controller"
 	"github.com/preciouswxe/EchoBoard_backend/dao/redis"
 	"github.com/preciouswxe/EchoBoard_backend/pkg/jwt"
@@ -71,4 +72,4 @@ func JWTAuthMiddleware() func(c *gin.Context) {
 // 记录登录设备信息（IP、UA）
 // 支持 “异地登录提醒”
 // 支持强制下线 / 踢人
-// 支持刷新 token 机制（access + refresh） liwenzhou也说了
+// 支持刷新 token 机制（access + refresh）

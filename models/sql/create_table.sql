@@ -11,7 +11,7 @@ CREATE TABLE `user` (
     PRIMARY KEY (`id`),
     UNIQUE KEY `idx_username` (`username`) USING BTREE,
     UNIQUE KEY `idx_user_od` (`user_id`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET = utf8m4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET = utf8mb4 COLLATE=utf8mb4_general_ci;
 
 # 防止相同表
 DROP TABLE IF EXISTS `community`;
@@ -56,3 +56,66 @@ CREATE TABLE `post` (
                         KEY `idx_author_id` (`author_id`),
                         KEY `idx_community_id` (`community_id`)
 )ENGINE=INNODB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+-- ================================================
+-- 1. post 表新增计数字段
+-- ================================================
+ALTER TABLE `post`
+    ADD COLUMN `like_num` int NOT NULL DEFAULT 0 COMMENT '点赞数',
+	ADD COLUMN `collect_num` int NOT NULL DEFAULT 0 COMMENT '收藏数',
+	ADD COLUMN `comment_num` int NOT NULL DEFAULT 0 COMMENT '评论数';
+
+
+-- ================================================
+-- 2. 点赞记录表
+-- ================================================
+CREATE TABLE `post_like`(
+                            `id` bigint not null auto_increment COMMENT '记录ID',
+                            `user_id` bigint not null COMMENT '用户ID',
+                            `post_id` bigint not null COMMENT '帖子ID',
+                            `create_time` TIMESTAMP not null DEFAULT CURRENT_TIMESTAMP,
+
+                            PRIMARY KEY (`id`),
+                            UNIQUE KEY `uk_user_post` (`user_id`, `post_id`),
+                            KEY `idx_user_id` (`user_id`),
+                            KEY `idx_post_id` (`post_id`)
+)ENGINE=INNODB DEFAULT CHARSET=utf8mb4 COMMENT='帖子点赞记录';
+
+
+-- ================================================
+-- 3. 收藏记录表
+-- ================================================
+CREATE TABLE `post_collect`(
+                               `id` bigint not null auto_increment COMMENT '记录ID',
+                               `user_id` bigint not null COMMENT '用户ID',
+                               `post_id` bigint not null COMMENT '帖子ID',
+                               `create_time` TIMESTAMP not null DEFAULT CURRENT_TIMESTAMP,
+
+                               PRIMARY KEY (`id`),
+                               UNIQUE KEY `uk_user_post` (`user_id`, `post_id`),
+                               KEY `idx_user_id` (`user_id`),
+                               KEY `idx_post_id` (`post_id`)
+)ENGINE=INNODB DEFAULT CHARSET=utf8mb4 COMMENT='帖子收藏记录';
+
+
+-- ================================================
+-- 4. 评论表
+-- ================================================
+CREATE TABLE `post_comment` (
+                                `id` bigint not null auto_increment COMMENT '记录ID',
+                                `comment_id` bigint not null COMMENT '雪花算法评论id',
+                                `post_id` bigint not null COMMENT '帖子id',
+                                `user_id` bigint not null COMMENT '评论者的user_id',
+                                `parent_id` bigint null DEFAULT NULL COMMENT 'NULL表示顶级评论（没有上一级评论），否则为回复的评论id',
+                                `content` VARCHAR(1024) NOT NULL COMMENT '评论内容',
+                                `status` tinyint not null DEFAULT 1 COMMENT '状态 1正常 0删除（软删除）',
+                                `create_time` TIMESTAMP not null DEFAULT CURRENT_TIMESTAMP,
+                                `update_time` TIMESTAMP not null DEFAULT CURRENT_TIMESTAMP on UPDATE CURRENT_TIMESTAMP,
+
+                                PRIMARY KEY (`id`),
+                                UNIQUE KEY `uk_comment_id` (`comment_id`),
+                                KEY `idx_post_id` (`post_id`),
+                                KEY `idx_user_id` (`user_id`),
+                                KEY `idx_parent_id` (`parent_id`)
+)ENGINE=INNODB DEFAULT CHARSET=utf8mb4 COMMENT='帖子评论表';

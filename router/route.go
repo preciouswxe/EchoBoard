@@ -1,12 +1,13 @@
 package router
 
 import (
+	"net/http"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/preciouswxe/EchoBoard_backend/controller"
 	"github.com/preciouswxe/EchoBoard_backend/logger"
 	"github.com/preciouswxe/EchoBoard_backend/middlewares"
-	"net/http"
-	"time"
 
 	"github.com/gin-contrib/pprof"
 	_ "github.com/preciouswxe/EchoBoard_backend/docs"
@@ -24,13 +25,13 @@ func SetupRouter(mode string) *gin.Engine {
 	r.Use(logger.GinLogger(), logger.GinRecovery(true), middlewares.RateLimitMiddleware(2*time.Second, 10))
 
 	// 加载静态文件
-	r.LoadHTMLFiles("./templates/index.html")
+	//r.LoadHTMLFiles("./templates/index.html")
 	// 让 html 里的引用都映射到根目录下的 static
-	r.Static("/static", "./static")
+	//r.Static("/static", "./static")
 	// 前端展示页
-	r.GET("/", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "index.html", nil)
-	})
+	//r.GET("/", func(c *gin.Context) {
+	//	c.HTML(http.StatusOK, "index.html", nil)
+	//})
 
 	// 后端路由组
 	v1 := r.Group("/api/v1")
@@ -47,10 +48,10 @@ func SetupRouter(mode string) *gin.Engine {
 
 		v1.POST("/post", controller.CreatePostHandler)
 		v1.GET("/post/:id", controller.GetPostDetailHandler)
-		v1.GET("/posts", controller.GetPostListHandler)
 
-		// 根据时间或分数获取帖子列表
-		v1.GET("/posts2", controller.GetPostListHandler2)
+		v1.GET("/posts", controller.GetPostListHandler) // 暂时不用
+		v1.GET("/posts2", controller.GetPostListHandler2) // 根据时间或分数获取帖子列表
+		v1.GET("/posts/search", controller.GetPostsBySearchHandler)
 
 		v1.POST("/vote", controller.PostVoteController)
 	}
