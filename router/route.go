@@ -4,15 +4,16 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gin-gonic/gin"
-	"github.com/preciouswxe/EchoBoard_backend/controller"
-	"github.com/preciouswxe/EchoBoard_backend/logger"
-	"github.com/preciouswxe/EchoBoard_backend/middlewares"
-
 	"github.com/gin-contrib/pprof"
-	_ "github.com/preciouswxe/EchoBoard_backend/docs"
+	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+
+	"github.com/preciouswxe/EchoBoard_backend/controller"
+	postController "github.com/preciouswxe/EchoBoard_backend/controller/post"
+	_ "github.com/preciouswxe/EchoBoard_backend/docs"
+	"github.com/preciouswxe/EchoBoard_backend/logger"
+	"github.com/preciouswxe/EchoBoard_backend/middlewares"
 )
 
 func SetupRouter(mode string) *gin.Engine {
@@ -21,7 +22,7 @@ func SetupRouter(mode string) *gin.Engine {
 	}
 
 	r := gin.New()
-
+	// 使用中间件
 	r.Use(logger.GinLogger(), logger.GinRecovery(true), middlewares.RateLimitMiddleware(2*time.Second, 10))
 
 	// 加载静态文件
@@ -43,17 +44,25 @@ func SetupRouter(mode string) *gin.Engine {
 	// 开启 JWT 认证
 	v1.Use(middlewares.JWTAuthMiddleware())
 	{
+		// 1. 话题（社区）相关
 		v1.GET("/community", controller.CommunityHandler)
 		v1.GET("/community/:id", controller.CommunityDetailHandler)
 
-		v1.POST("/post", controller.CreatePostHandler)
-		v1.GET("/post/:id", controller.GetPostDetailHandler)
-
-		v1.GET("/posts", controller.GetPostListHandler) // 暂时不用
-		v1.GET("/posts2", controller.GetPostListHandler2) // 根据时间或分数获取帖子列表
-		v1.GET("/posts/search", controller.GetPostsBySearchHandler)
-
-		v1.POST("/vote", controller.PostVoteController)
+		// 2. 帖子相关
+		v1.POST("/post", postController.CreatePostHandler)
+		v1.GET("/post/:id", postController.GetPostDetailHandler)
+		//v1.GET("/posts", postController.GetPostListHandler)   // 暂时不用
+		v1.GET("/posts2", postController.GetPostListHandler2) // 根据时间或分数获取帖子列表
+		v1.GET("/posts/search", postController.GetPostsBySearchHandler)
+		// 点赞
+		v1.POST("/post/:id/like", postController.LikePostHandler)
+		v1.DELETE("/post/:id/like", postController.UnlikePostHandler)
+		// 收藏
+		v1.POST("/post/:id/collect", postController.CollectPostHandler)
+		v1.DELETE("/post/:id/collect", postController.CancelCollectPostHandler)
+		// 评论
+		v1.POST("/post/:id/comment", postController.CreateCommentHandler)
+		v1.GET("/post/:id/comment", postController.GetCommentListHandler)
 	}
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

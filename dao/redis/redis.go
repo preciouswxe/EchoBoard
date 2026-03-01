@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/go-redis/redis/v8"
+
 	"github.com/preciouswxe/EchoBoard_backend/setting"
 )
 

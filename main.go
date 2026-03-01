@@ -64,27 +64,28 @@ func main() {
 	}
 	defer redis.Close()
 
+	// 5. 初始化ES连接
 	if err := es.Init(setting.Conf.EsConfig); err != nil {
 		fmt.Printf("init elasticsearch failed, err:%v\n", err)
 		return
 	}
 
-	// 5. 加载雪花算法
+	// 6. 加载雪花算法
 	if err := snowflake.Init(setting.Conf.AppConfig.StartTime, setting.Conf.AppConfig.MachineID); err != nil {
 		fmt.Printf("init snowflake failed, err:%v\n", err)
 		return
 	}
 
-	// 初始化 gin 框架内置的校验器使用的翻译器
+	// 7. 初始化 gin 框架内置的校验器使用的翻译器
 	if err := controller.InitTrans("zh"); err != nil {
 		fmt.Printf("init trans failed, err:%v\n", err)
 		return
 	}
 
-	// 6. 注册路由
+	// 8. 注册路由
 	r := router.SetupRouter(setting.Conf.Mode)
 
-	// 7. 启动服务（优雅关机）
+	// 9. 启动服务（优雅关机）
 	srv := &http.Server{
 		Addr:    fmt.Sprintf("%s:%d", viper.GetString("app.host"), viper.GetInt("app.port")),
 		Handler: r,

@@ -12,6 +12,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	enTranslations "github.com/go-playground/validator/v10/translations/en"
 	zhTranslations "github.com/go-playground/validator/v10/translations/zh"
+
 	"github.com/preciouswxe/EchoBoard_backend/models"
 )
 
@@ -36,7 +37,7 @@ func InitTrans(locale string) (err error) {
 			return name
 		})
 
-		// 为SignUpParam注册自定义校验方法
+		// 为 SignUpParam 注册自定义校验方法
 		v.RegisterStructValidation(SignUpParamStructLevelValidation, models.ParamSignUp{})
 
 		zhT := zh.New() // 中文翻译器

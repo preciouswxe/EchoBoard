@@ -1,12 +1,14 @@
-package controller
+package post
 
 import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
+
+	"github.com/preciouswxe/EchoBoard_backend/controller"
 	"github.com/preciouswxe/EchoBoard_backend/logic"
 	"github.com/preciouswxe/EchoBoard_backend/models"
-	"go.uber.org/zap"
 )
 
 // CreatePostHandler 创建帖子
@@ -26,13 +28,14 @@ func CreatePostHandler(c *gin.Context) {
 	if err := c.ShouldBindJSON(p); err != nil {
 		zap.L().Debug("c.ShouldBindJSON(p) error", zap.Any("err", err))
 		zap.L().Error("create post with invalid param")
-		ResponseError(c, CodeInvalidParam)
+		controller.ResponseError(c, controller.CodeInvalidParam)
 		return
 	}
 	// 从 context 取到当前发送请求的用户的 ID
-	userID, err := getCurrentUser(c)
+	userID, err := controller.GetCurrentUser(c)
 	if err != nil {
-		ResponseError(c, CodeNeedLogin)
+		zap.L().Error("getCurrentUser failed", zap.Error(err))
+		controller.ResponseError(c, controller.CodeNeedLogin)
 		return
 	}
 	// 发帖人和登录用户 ID 保持一致
@@ -40,12 +43,12 @@ func CreatePostHandler(c *gin.Context) {
 	// 创建帖子
 	if err := logic.CreatePost(p); err != nil {
 		zap.L().Error("logic.CreatePost(p) failed:", zap.Error(err))
-		ResponseError(c, CodeServerBusy)
+		controller.ResponseError(c, controller.CodeServerBusy)
 		return
 	}
 
 	// 返回响应
-	ResponseSuccess(c, nil)
+	controller.ResponseSuccess(c, nil)
 }
 
 // GetPostDetailHandler 获取单个帖子详情
@@ -65,25 +68,29 @@ func GetPostDetailHandler(c *gin.Context) {
 	postID, err := strconv.ParseInt(postIDStr, 10, 64)
 	if err != nil {
 		zap.L().Error("get post detail with invalid param", zap.Error(err))
-		ResponseError(c, CodeInvalidParam)
+		controller.ResponseError(c, controller.CodeInvalidParam)
 		return
 	}
 	// 获取当前登录的用户 ID，用于查询与帖子的点赞收藏关系
-	userID, _ := getCurrentUser(c)
-
+	userID, err := controller.GetCurrentUser(c)
+	if err != nil {
+		zap.L().Error("getCurrentUser failed", zap.Error(err))
+		controller.ResponseError(c, controller.CodeNeedLogin)
+		return
+	}
 	// 根据 id 取出帖子数据
 	data, err := logic.GetPostById(postID, userID)
 	if err != nil {
 		zap.L().Error("logic.GetPostById(postID) failed", zap.Error(err))
-		ResponseError(c, CodeServerBusy)
+		controller.ResponseError(c, controller.CodeServerBusy)
 		return
 	}
 
 	// 返回响应
-	ResponseSuccess(c, data)
+	controller.ResponseSuccess(c, data)
 }
 
-// GetPostListHandler 获取帖子列表
+// GetPostListHandler 获取帖子列表 [弃用]
 // @Summary 获取帖子列表
 // @Description 从 url 获取帖子 id 并返回帖子详情
 // @Tags 帖子相关接口
@@ -97,17 +104,17 @@ func GetPostDetailHandler(c *gin.Context) {
 // @Router /api/v1/posts [get]
 func GetPostListHandler(c *gin.Context) {
 	// 获取分页参数
-	page, size := getPageInfo(c)
+	page, size := controller.GetPageInfo(c)
 	// 获取数据
 	data, err := logic.GetPostList(page, size)
 	if err != nil {
 		zap.L().Error("logic.GetPostList() failed", zap.Error(err))
-		ResponseError(c, CodeServerBusy)
+		controller.ResponseError(c, controller.CodeServerBusy)
 		return
 	}
 
 	// 返回响应
-	ResponseSuccess(c, data)
+	controller.ResponseSuccess(c, data)
 }
 
 // GetPostListHandler2 升级版获取帖子列表接口
@@ -143,36 +150,43 @@ func GetPostListHandler2(c *gin.Context) {
 	// c.ShouldBindJSON() 如果请求中携带的是 json 格式的数据，采用这个方法获取数据
 	if err := c.ShouldBindQuery(p); err != nil {
 		zap.L().Error("GetPostListHandler2 with invalid params", zap.Error(err))
-		ResponseError(c, CodeInvalidParam)
+		controller.ResponseError(c, controller.CodeInvalidParam)
 		return
 	}
 
 	// 获取当前登录的用户 ID，用于查询与帖子的点赞收藏关系
-	userID, _ := getCurrentUser(c)
+	userID, err := controller.GetCurrentUser(c)
+	if err != nil {
+		zap.L().Error("getCurrentUser failed", zap.Error(err))
+		controller.ResponseError(c, controller.CodeNeedLogin)
+		return
+	}
 
 	// 获取数据
 	data, err := logic.GetPostListNew(p, userID)
 
 	if err != nil {
 		zap.L().Error("logic.GetPostList() failed", zap.Error(err))
-		ResponseError(c, CodeServerBusy)
+		controller.ResponseError(c, controller.CodeServerBusy)
 		return
 	}
 
 	// 返回响应
-	ResponseSuccess(c, data)
+	controller.ResponseSuccess(c, data)
 }
 
 // GetPostsBySearchHandler 搜索获取符合关键词的帖子
 // @Summary 搜索获取符合关键词接口
-// @Description 从 url 获取 key_word 并返回符合的帖子列表（另起一页）
+// @Description 从 url 获取 key_word 并返回符合的帖子列表和推荐列表
 // @Tags 帖子相关接口
 // @Accept application/json
 // @Produce application/json
 // @Param Authorization header string true "Bearer 用户 token 令牌"
-// @Param id path int true "帖子 id"
+// @Param key_word query string true "搜索关键词"
+// @Param page query int false "页码" default(1)
+// @Param size query int false "每页数量" default(20)
 // @Security ApiKeyAuth
-// @Success 200 {object}
+// @Success 200 {object} controller.ResponseData{data=object{search=object{total=int,list=[]models.ApiPostDetail},recommend=object{list=[]models.ApiPostDetail}}}
 // @Router /api/v1/posts/search [get]
 func GetPostsBySearchHandler(c *gin.Context) {
 	// GET 请求参数: /api/v1/posts/search?key_word=xxx&page=1&size=10
@@ -183,18 +197,37 @@ func GetPostsBySearchHandler(c *gin.Context) {
 	}
 	if err := c.ShouldBindQuery(p); err != nil {
 		zap.L().Error("GetPostsBySearchHandler with invalid params", zap.Error(err))
-		ResponseError(c, CodeInvalidParam)
-		return
-	}
-	// 根据关键词取出符合的帖子列表
-	data, err := logic.GetPostListBySearch(p)
-	if err != nil {
-		zap.L().Error("logic.GetPostListBySearch failed", zap.Error(err))
-		ResponseError(c, CodeServerBusy)
+		controller.ResponseError(c, controller.CodeInvalidParam)
 		return
 	}
 
-	ResponseSuccess(c, data)
+	// 获取当前登录的用户 ID，用于查询与帖子的点赞收藏关系
+	userID, err := controller.GetCurrentUser(c)
+	if err != nil {
+		zap.L().Error("getCurrentUser failed", zap.Error(err))
+		controller.ResponseError(c, controller.CodeNeedLogin)
+		return
+	}
+	zap.L().Info("getCurrentUser", zap.Int64("userID", userID))
+
+	// 根据关键词取出符合的帖子列表 + 推荐列表
+	searchData, recommendData, total, err := logic.GetPostListBySearch(p, userID)
+	if err != nil {
+		zap.L().Error("logic.GetPostListBySearch failed", zap.Error(err))
+		controller.ResponseError(c, controller.CodeServerBusy)
+		return
+	}
+
+	// 返回结构化数据
+	controller.ResponseSuccess(c, gin.H{
+		"search": gin.H{
+			"total": total,
+			"list":  searchData,
+		},
+		"recommend": gin.H{
+			"list": recommendData,
+		},
+	})
 }
 
 // GetCommunityPostListHandler 根据社区去查询帖子列表

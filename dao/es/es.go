@@ -74,7 +74,7 @@ func SearchPosts(keyword string, page, size int64) (postIDs []int64, total int64
 			}).
 		Do(context.Background())
 	if err != nil {
-		return nil, 0, fmt.Errorf("")
+		return nil, 0, fmt.Errorf("es.Client.Search() failed")
 	}
 
 	total = res.Hits.Total.Value
@@ -104,3 +104,4 @@ func SearchPosts(keyword string, page, size int64) (postIDs []int64, total int64
 //    }
 //  }
 //}
+

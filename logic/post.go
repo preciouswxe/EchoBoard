@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	dao_es "github.com/preciouswxe/EchoBoard_backend/dao/es"
+	dao_redis "github.com/preciouswxe/EchoBoard_backend/dao/redis"
 	"github.com/preciouswxe/EchoBoard_backend/dao/mysql"
 	"github.com/preciouswxe/EchoBoard_backend/dao/redis"
 	"github.com/preciouswxe/EchoBoard_backend/models"
@@ -19,7 +20,7 @@ func CreatePost(p *models.Post) (err error) {
 	if err != nil {
 		return err
 	}
-	// redis 记录帖子创建时间
+	// redis 记录帖子创建信息
 	err = redis.CreatePost(p.ID, p.CommunityID)
 	// 异步写入 es
 	go func(postCopy *models.Post) {
@@ -62,9 +63,16 @@ func GetPostById(postID, userID int64) (data *models.ApiPostDetail, err error) {
 		return nil, err
 	}
 
+	isLiked, isCollected, err := mysql.GetPostUserRelation(post.ID, userID) // 注意这里传入的是当前用户ID，不是作者ID
+	if err != nil {
+		zap.L().Error("mysql.GetPostUserRelation failed", zap.Error(err))
+	}
+
 	// 拼接并返回数据
 	data = &models.ApiPostDetail{
 		AuthorName:      user.Username,
+		IsLiked:         isLiked,
+		IsCollected:     isCollected,
 		Post:            post,
 		CommunityDetail: communityDetail,
 	}
@@ -104,6 +112,7 @@ func GetPostList(page, size int64) (data []*models.ApiPostDetail, err error) {
 	return
 }
 
+// GetPostList2 进阶版 - 获取帖子列表
 func GetPostList2(p *models.ParamPostList, userID int64) (data []*models.ApiPostDetail, err error) {
 	// 去 redis 查询 id 列表
 	ids, err := redis.GetPostIDsInOrder(p)
@@ -122,24 +131,25 @@ func GetPostList2(p *models.ParamPostList, userID int64) (data []*models.ApiPost
 		return
 	}
 
-	// 提前查询好每篇帖子的 vote 数
-	voteData, err := redis.GetPostVoteData(ids)
-	if err != nil {
-		return
-	}
 
 	// 列表需要循环读出具体信息
-	for idx, post := range posts {
+	for _, post := range posts {
 		user, communityDetail, err := getPostInfo(post)
 		if err != nil {
 			zap.L().Error("getPostInfo failed", zap.Error(err))
 			return nil, err
 		}
 
+		isLiked, isCollected, err := mysql.GetPostUserRelation(post.ID, userID) // 注意这里传入的是当前用户ID，不是作者ID
+		if err != nil {
+			zap.L().Error("mysql.GetPostUserRelation failed", zap.Error(err))
+		}
+
 		// 拼接
 		postDetail := &models.ApiPostDetail{
 			AuthorName:      user.Username,
-			VoteNum:         voteData[idx],
+			IsLiked:         isLiked,
+			IsCollected:     isCollected,
 			Post:            post,
 			CommunityDetail: communityDetail,
 		}
@@ -150,7 +160,8 @@ func GetPostList2(p *models.ParamPostList, userID int64) (data []*models.ApiPost
 	return
 }
 
-func GetCommunityPostList(p *models.ParamPostList) (data []*models.ApiPostDetail, err error) {
+// GetCommunityPostList 根据社区返回帖子列表
+func GetCommunityPostList(p *models.ParamPostList, userID int64) (data []*models.ApiPostDetail, err error) {
 	// 去 redis 查询 id 列表
 	ids, err := redis.GetCommunityPostIDsInOrder(p)
 	if err != nil {
@@ -168,24 +179,25 @@ func GetCommunityPostList(p *models.ParamPostList) (data []*models.ApiPostDetail
 		return
 	}
 
-	// 提前查询好每篇帖子的 vote 数
-	voteData, err := redis.GetPostVoteData(ids)
-	if err != nil {
-		return
-	}
 
 	// 列表需要循环读出具体信息
-	for idx, post := range posts {
+	for _, post := range posts {
 		user, communityDetail, err := getPostInfo(post)
 		if err != nil {
 			zap.L().Error("getPostInfo failed", zap.Error(err))
 			return nil, err
 		}
 
+		isLiked, isCollected, err := mysql.GetPostUserRelation(post.ID, userID) // 注意这里传入的是当前用户ID，不是作者ID
+		if err != nil {
+			zap.L().Error("mysql.GetPostUserRelation failed", zap.Error(err))
+		}
+
 		// 拼接
 		postDetail := &models.ApiPostDetail{
 			AuthorName:      user.Username,
-			VoteNum:         voteData[idx],
+			IsLiked:         isLiked,
+			IsCollected:     isCollected,
 			Post:            post,
 			CommunityDetail: communityDetail,
 		}
@@ -197,14 +209,14 @@ func GetCommunityPostList(p *models.ParamPostList) (data []*models.ApiPostDetail
 }
 
 // GetPostListNew 将两个查询逻辑合二为一
-func GetPostListNew(p *models.ParamPostList) (data []*models.ApiPostDetail, err error) {
+func GetPostListNew(p *models.ParamPostList, userID int64) (data []*models.ApiPostDetail, err error) {
 	// 根据请求参数的不同，执行不同的逻辑
 	if p.CommunityID == 0 {
 		// 说明查询所有
-		data, err = GetPostList2(p)
+		data, err = GetPostList2(p, userID)
 	} else {
 		// 根据社区 id 查询
-		data, err = GetCommunityPostList(p)
+		data, err = GetCommunityPostList(p, userID)
 	}
 
 	if err != nil {
@@ -215,52 +227,104 @@ func GetPostListNew(p *models.ParamPostList) (data []*models.ApiPostDetail, err 
 	return
 }
 
-// GetPostListBySearch 用户输入关键词获取搜索结果
-func GetPostListBySearch(p *models.ParamSearchPostList) (data []*models.ApiPostDetail, err error) {
-	// 走 ES 搜索
-	postIDs, _, err := dao_es.SearchPosts(p.KeyWord, p.Page, p.Size)
+// GetPostListBySearch 用户输入关键词获取搜索结果 - 接 ES
+func GetPostListBySearch(p *models.ParamSearchPostList, userID int64) (searchData []*models.ApiPostDetail, recommendData []*models.ApiPostDetail, total int64, err error) {
+	// 1. 走 ES 搜索
+	postIDs, total, err := dao_es.SearchPosts(p.KeyWord, p.Page, p.Size)
 	if err != nil {
 		zap.L().Error("dao_es.SearchPosts failed", zap.String("keyword", p.KeyWord), zap.Error(err))
-		return nil, err
+		return nil, nil, 0, err
 	}
 
-	if len(postIDs)==0 {
+	// 2. 处理搜索结果
+	searchData = make([]*models.ApiPostDetail, 0)
+	var mainCommunityID int64 = 0 // 用于推荐
+
+	if len(postIDs) > 0 {
+		searchData, err = getPostDetailsByIDs(postIDs, userID)
+		if err != nil {
+			zap.L().Error("getPostDetailsByIDs for search failed", zap.Error(err))
+			return nil, nil, total, err
+		}
+
+		// 获取第一个搜索结果的社区ID（用于推荐同社区内容）
+		if len(searchData) > 0 && searchData[0].CommunityDetail != nil {
+			mainCommunityID = searchData[0].CommunityDetail.ID
+		}
+	}
+
+	// 3. 获取推荐（优先推荐同社区）
+	recommendData = make([]*models.ApiPostDetail, 0)
+	recommendIDStrs, err := dao_redis.GetRecommendPostIDs(8, postIDs, mainCommunityID)
+	if err != nil {
+		zap.L().Warn("dao_redis.GetRecommendPostIDs failed", zap.Error(err))
+		return searchData, recommendData, total, nil
+	}
+
+	// 转换为int64
+	var recommendIDs []int64
+	for _, idStr := range recommendIDStrs {
+		id, _ := strconv.ParseInt(idStr, 10, 64)
+		recommendIDs = append(recommendIDs, id)
+	}
+
+	if len(recommendIDs) > 0 {
+		recommendData, err = getPostDetailsByIDs(recommendIDs, userID)
+		if err != nil {
+			zap.L().Error("getPostDetailsByIDs for recommend failed", zap.Error(err))
+		}
+	}
+
+	return searchData, recommendData, total, nil
+}
+
+// getPostDetailsByIDs 根据帖子ID列表获取详细信息（复用逻辑）
+func getPostDetailsByIDs(postIDs []int64, userID int64) ([]*models.ApiPostDetail, error) {
+	if len(postIDs) == 0 {
 		zap.L().Info("len(postIDs)==0, return make([]*models.ApiPostDetail, 0), nil")
 		return make([]*models.ApiPostDetail, 0), nil
 	}
-
 	// int64 转 string
 	ids := make([]string, 0, len(postIDs))
 	for _, id := range postIDs {
 		ids = append(ids, strconv.FormatInt(id, 10))
 	}
-
-	// 复用已有的 GetPostListByIDs
+	// 从 MySQL 获取帖子信息
 	posts, err := mysql.GetPostListByIDs(ids)
 	if err != nil {
-		zap.L().Error("mysql.GetPostListByIDs failed",zap.Error(err))
+		zap.L().Error("mysql.GetPostListByIDs failed", zap.Error(err))
 		return nil, err
 	}
+
+	data := make([]*models.ApiPostDetail, 0, len(posts))
 	for _, post := range posts {
 		user, communityDetail, err := getPostInfo(post)
 		if err != nil {
 			zap.L().Error("getPostInfo failed", zap.Error(err))
 			return nil, err
 		}
+
+		isLiked, isCollected, err := mysql.GetPostUserRelation(post.ID, userID)
+		if err != nil {
+			zap.L().Error("mysql.GetPostUserRelation failed", zap.Error(err))
+		}
+
 		// 拼接
 		postDetail := &models.ApiPostDetail{
 			AuthorName:      user.Username,
 			Post:            post,
+			IsLiked:         isLiked,
+			IsCollected:     isCollected,
 			CommunityDetail: communityDetail,
 		}
 
 		data = append(data, postDetail)
 	}
 
-	return
+	return data, nil
 }
 
-// GetPostListBySearchByLike 纯 mysql like搜索
+// GetPostListBySearchByLike 纯 mysql like搜索 [停用]
 func GetPostListBySearchByLike(p *models.ParamSearchPostList) (data []*models.ApiPostDetail, err error) {
 	posts, err := mysql.GetPostListByKeyWord(p.KeyWord, p.Page, p.Size)
 	if err != nil {
