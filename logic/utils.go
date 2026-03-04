@@ -6,6 +6,13 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	ActionLike          = "like"
+	ActionUnlike        = "unlike"
+	ActionCollect       = "collect"
+	ActionCancelCollect = "cancel_collect"
+)
+
 func getPostInfo(post *models.Post) (*models.User, *models.CommunityDetail, error) {
 	// 根据作者 id 查询作者信息
 	user, err := mysql.GetUserById(post.AuthorID)

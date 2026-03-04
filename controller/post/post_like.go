@@ -4,10 +4,10 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/preciouswxe/EchoBoard_backend/dao/redis"
 	"go.uber.org/zap"
 
 	"github.com/preciouswxe/EchoBoard_backend/controller"
+	"github.com/preciouswxe/EchoBoard_backend/dao/redis"
 	"github.com/preciouswxe/EchoBoard_backend/logic"
 )
 

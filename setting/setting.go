@@ -17,6 +17,7 @@ type multipleConfig struct {
 	*MySQLConfig `mapstructure:"mysql"`
 	*RedisConfig `mapstructure:"redis"`
 	*EsConfig	 `mapstructure:"es"`
+	*KafkaConfig `mapstructure:"kafka"`
 }
 
 type AppConfig struct {
@@ -57,6 +58,22 @@ type RedisConfig struct {
 type EsConfig struct {
 	Host string `mapstructure:"host"`
 	Port int 	`mapstructure:"port"`
+}
+
+type KafkaConfig struct {
+	Brokers      []string `mapstructure:"brokers"`       // Broker 地址列表
+	Compression  string   `mapstructure:"compression"`   // 压缩算法: none, gzip, snappy, lz4, zstd
+	MaxAttempts  int      `mapstructure:"max_attempts"`  // 重试次数
+	BatchSize    int      `mapstructure:"batch_size"`    // 批量发送大小
+	BatchTimeout int      `mapstructure:"batch_timeout"` // 批量超时(毫秒)
+	RequiredAcks int      `mapstructure:"required_acks"` // 确认级别: 0(不等待), 1(leader), -1(all)
+	// 消费者配置
+	ConsumerGroup string `mapstructure:"consumer_group"` // 消费者组ID
+	MinBytes      int    `mapstructure:"min_bytes"`      // 最小字节数
+	MaxBytes      int    `mapstructure:"max_bytes"`      // 最大字节数
+	// dlq配置
+	DLQTopic   string `mapstructure:"dlq_topic"`   // 死信队列 topic
+	MaxRetries int    `mapstructure:"max_retries"` // 消费者最大重试次数
 }
 
 func Init() (err error) {

@@ -2,7 +2,6 @@ package router
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
@@ -23,7 +22,8 @@ func SetupRouter(mode string) *gin.Engine {
 
 	r := gin.New()
 	// 使用中间件
-	r.Use(logger.GinLogger(), logger.GinRecovery(true), middlewares.RateLimitMiddleware(2*time.Second, 10))
+	//r.Use(logger.GinLogger(), logger.GinRecovery(true), middlewares.RateLimitMiddleware(2*time.Second, 10))
+	r.Use(logger.GinLogger(), logger.GinRecovery(true))
 
 	// 加载静态文件
 	//r.LoadHTMLFiles("./templates/index.html")

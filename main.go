@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/preciouswxe/EchoBoard_backend/pkg/es"
+	"github.com/preciouswxe/EchoBoard_backend/pkg/kafka"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 
@@ -64,28 +65,35 @@ func main() {
 	}
 	defer redis.Close()
 
-	// 5. 初始化ES连接
+	// 5. 初始化 ES 连接
 	if err := es.Init(setting.Conf.EsConfig); err != nil {
 		fmt.Printf("init elasticsearch failed, err:%v\n", err)
 		return
 	}
 
-	// 6. 加载雪花算法
+	// 6. 初始化 Kafka
+	if err := kafka.Init(setting.Conf.KafkaConfig); err != nil {
+		zap.L().Error("init kafka failed", zap.Error(err))
+		return
+	}
+	defer kafka.Close()
+
+	// 7. 加载雪花算法
 	if err := snowflake.Init(setting.Conf.AppConfig.StartTime, setting.Conf.AppConfig.MachineID); err != nil {
 		fmt.Printf("init snowflake failed, err:%v\n", err)
 		return
 	}
 
-	// 7. 初始化 gin 框架内置的校验器使用的翻译器
+	// 8. 初始化 gin 框架内置的校验器使用的翻译器
 	if err := controller.InitTrans("zh"); err != nil {
 		fmt.Printf("init trans failed, err:%v\n", err)
 		return
 	}
 
-	// 8. 注册路由
+	// 9. 注册路由
 	r := router.SetupRouter(setting.Conf.Mode)
 
-	// 9. 启动服务（优雅关机）
+	// 10. 启动服务（优雅关机）
 	srv := &http.Server{
 		Addr:    fmt.Sprintf("%s:%d", viper.GetString("app.host"), viper.GetInt("app.port")),
 		Handler: r,

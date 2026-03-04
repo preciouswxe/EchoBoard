@@ -1,10 +1,10 @@
 package logic
 
 import (
-	"github.com/preciouswxe/EchoBoard_backend/dao/redis"
 	"go.uber.org/zap"
 
-	"github.com/preciouswxe/EchoBoard_backend/dao/mysql"
+	dao_kafka "github.com/preciouswxe/EchoBoard_backend/dao/kafka"
+	"github.com/preciouswxe/EchoBoard_backend/dao/redis"
 )
 
 func CollectPost(postID, userID int64) (err error) {
@@ -14,12 +14,13 @@ func CollectPost(postID, userID int64) (err error) {
 		return
 	}
 
-	// 2. 再写 MySQL
-	// TODO: 后续改用消息队列异步写入
-	if err = mysql.CollectPost(postID, userID); err != nil {
-		zap.L().Error("mysql.CollectPost failed", zap.Error(err))
-		return
-	}
+	// 2. 异步发送到 Kafka（不阻塞）- mysql持久化由消费者端进行
+	go func() {
+		if err := dao_kafka.PublishInteractionEvent(ActionCollect, postID, userID); err != nil {
+			zap.L().Error("Failed to publish collect event", zap.Error(err))
+			// Kafka 失败,回滚 Redis
+		}
+	}()
 	return
 }
 
@@ -30,11 +31,11 @@ func CancelCollectPost(postID, userID int64) (err error) {
 		return
 	}
 
-	// 2. 再写 MySQL
-	// TODO: 后续改用消息队列异步写入
-	if err = mysql.CancelCollectPost(postID, userID); err != nil {
-		zap.L().Error("mysql.CancelCollectPost failed", zap.Error(err))
-		return
-	}
+	// 2. 异步发送到 Kafka（不阻塞）
+	go func() {
+		if err := dao_kafka.PublishInteractionEvent(ActionCancelCollect, postID, userID); err != nil {
+			zap.L().Error("Failed to publish cancel collect event", zap.Error(err))
+		}
+	}()
 	return
 }

@@ -79,7 +79,7 @@ func GetPostListByKeyWord(keyWord string, page, size int64) (postList []*models.
 	return
 }
 
-// GetPostUserRelation 获取帖子与当前用户的点赞、收藏、评论关系
+// GetPostUserRelation 获取帖子与当前用户的点赞、收藏、评论关系 [停用，改用redis]
 func GetPostUserRelation(postID, userID int64) (isLiked, isCollected bool, err error) {
 	var count int
 

@@ -1,10 +1,10 @@
 package logic
 
 import (
-	"github.com/preciouswxe/EchoBoard_backend/dao/redis"
 	"go.uber.org/zap"
 
-	"github.com/preciouswxe/EchoBoard_backend/dao/mysql"
+	dao_kafka "github.com/preciouswxe/EchoBoard_backend/dao/kafka"
+	"github.com/preciouswxe/EchoBoard_backend/dao/redis"
 )
 
 func LikePost(postID, userID int64) (err error) {
@@ -14,15 +14,14 @@ func LikePost(postID, userID int64) (err error) {
 		return
 	}
 
-	// 2. 再写 MySQL（持久化）
-	// TODO: 后续改用消息队列异步写入
-	if err = mysql.LikePost(postID, userID); err != nil {
-		zap.L().Error("mysql.LikePost failed", zap.Error(err))
-		// 如果 MySQL 失败，需要回滚 Redis 吗？
-		// 方案1：不回滚，定时任务同步
-		// 方案2：回滚 Redis（redis.UnlikePost）
-		return
-	}
+
+
+	// 2. 异步发送到 Kafka（不阻塞）- mysql持久化由消费者端进行
+	go func() {
+		if err := dao_kafka.PublishInteractionEvent(ActionLike, postID, userID); err != nil {
+			zap.L().Error("Failed to publish like event", zap.Error(err))
+		}
+	}()
 	return
 }
 
@@ -33,11 +32,11 @@ func UnlikePost(postID, userID int64) (err error) {
 		return
 	}
 
-	// 2. 再写 MySQL
-	// TODO: 后续改用消息队列异步写入
-	if err = mysql.UnlikePost(postID, userID); err != nil {
-		zap.L().Error("mysql.UnlikePost failed", zap.Error(err))
-		return
-	}
+	// 2. 异步发送到 Kafka（不阻塞）
+	go func() {
+		if err := dao_kafka.PublishInteractionEvent(ActionUnlike, postID, userID); err != nil {
+			zap.L().Error("Failed to publish unlike event", zap.Error(err))
+		}
+	}()
 	return
 }

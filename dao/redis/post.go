@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"time"
 
@@ -54,7 +55,6 @@ func CreatePost(postID, communityID int64) error {
 	}
 	return nil
 }
-
 
 // getIDsFromKey 包内用于计算索引起始点
 func getIDsFromKey(key string, page, size int64) ([]string, error) {
@@ -162,14 +162,6 @@ func LikePost(userID, postID int64) (err error){
 		return err
 	}
 	return nil
-
-	// TODO: [消息队列] 发送点赞事件到 MQ，异步持久化到 MySQL
-	// 消息内容: {user_id, post_id, action: "like", timestamp}
-	// 接入步骤:
-	//   1. 引入 RabbitMQ/Kafka 客户端
-	//   2. 定义消息体: type InteractionEvent struct {...}
-	//   3. 发送: mq.Publish("post_interaction", event)
-	//   4. 消费者: 从队列取消息 -> 写入 MySQL post_like 表
 }
 
 // UnlikePost 取消点赞帖子（先写入redis）
@@ -214,15 +206,26 @@ func UnlikePost(userID, postID int64) (err error){
 		return err
 	}
 	return nil
+}
 
-	// TODO: [消息队列] 发送取消点赞事件到 MQ
+// GetPostLikeCount 获取帖子点赞数
+func GetPostLikeCount(postID int64) (int64, error) {
+	ctx := context.Background()
+	postIDStr := strconv.FormatInt(postID, 10)
+	key := getRedisKey(KeyPostLikedSetPF + postIDStr)
+
+	count, err := client.SCard(ctx, key).Result()
+	if errors.Is(err, redis.Nil) {
+		return 0, nil // key 不存在返回 0
+	}
+	return count, err
 }
 
 // IsUserLikedPost 检查用户是否已经点赞
 func IsUserLikedPost(userID, postID int64) (bool, error) {
 	ctx := context.Background()
 	postIDStr := strconv.FormatInt(postID, 10)
-	userIDStr := strconv.FormatInt(postID, 10)
+	userIDStr := strconv.FormatInt(userID, 10)
 
 	likeKey := getRedisKey(KeyPostLikedSetPF + postIDStr)
 	return client.SIsMember(ctx, likeKey, userIDStr).Result()
@@ -271,9 +274,6 @@ func CollectPost(userID, postID int64) (err error) {
 		)
 		return err
 	}
-
-	// TODO: [消息队列] 发送收藏事件到 MQ，异步持久化到 MySQL
-
 	return nil
 }
 
@@ -319,9 +319,20 @@ func CancelCollectPost(userID, postID int64) (err error) {
 		return err
 	}
 
-	// TODO: [消息队列] 发送取消收藏事件到 MQ
-
 	return nil
+}
+
+// GetPostCollectCount 获取帖子收藏数
+func GetPostCollectCount(postID int64) (int64, error) {
+	ctx := context.Background()
+	postIDStr := strconv.FormatInt(postID, 10)
+	key := getRedisKey(KeyPostCollectedSetPF + postIDStr)
+
+	count, err := client.SCard(ctx, key).Result()
+	if errors.Is(err, redis.Nil) {
+		return 0, nil
+	}
+	return count, err
 }
 
 // IsUserCollectedPost 检查用户是否收藏了该帖子
@@ -453,5 +464,71 @@ func getRecommendFromGlobal(ctx context.Context, fetchSize int, excludeMap map[i
 		}
 	}
 
+	return result, nil
+}
+
+type PostStatsAndRelation struct {
+	LikeCount      int64
+	CollectCount int64
+	IsLiked        bool
+	IsCollected     bool
+}
+
+// GetPostsStatsAndRelationBatch 批量获取多个帖子的统计数据和用户关系(用于列表查询优化)
+// 使用 Redis Pipeline 一次性查询所有数据,避免 N+1 查询问题
+func GetPostsStatsAndRelationBatch(postIDs []int64, userID int64) (map[int64]*PostStatsAndRelation, error) {
+	if len(postIDs) == 0 {
+		return make(map[int64]*PostStatsAndRelation), nil
+	}
+
+	ctx := context.Background()
+	pipe := client.Pipeline()
+
+	// 从 Hash 中批量查询每个帖子的点赞数和收藏数
+	statsCmds := make(map[int64]*redis.StringStringMapCmd)
+	for _, postID := range postIDs {
+		postIDStr := strconv.FormatInt(postID, 10)
+		statsKey := getRedisKey(KeyPostStatsPF + postIDStr)
+
+		// HGetAll 获取整个 Hash（like_num, collect_num, comment_num）
+		statsCmds[postID] = pipe.HGetAll(ctx, statsKey)
+	}
+
+	// 批量查询用户是否点赞/收藏了这些帖子
+	isLikedCmds := make(map[int64]*redis.BoolCmd)
+	isCollectedCmds := make(map[int64]*redis.BoolCmd)
+	userIDStr := strconv.FormatInt(userID, 10)
+	for _, postID := range postIDs {
+		postIDStr := strconv.FormatInt(postID, 10)
+		likeKey := getRedisKey(KeyPostLikedSetPF + postIDStr)
+		collectKey := getRedisKey(KeyPostCollectedSetPF + postIDStr)
+
+		isLikedCmds[postID] = pipe.SIsMember(ctx, likeKey, userIDStr)
+		isCollectedCmds[postID] = pipe.SIsMember(ctx, collectKey, userIDStr)
+	}
+
+	// 执行所有命令 (一次性网络请求)
+	_, err := pipe.Exec(ctx)
+	if err != nil && !errors.Is(err, redis.Nil) {
+		return nil, err
+	}
+
+	// 组装结果
+	result := make(map[int64]*PostStatsAndRelation)
+	for _, postID := range postIDs {
+		stats, _ := statsCmds[postID].Result()
+		likeCount, _ := strconv.ParseInt(stats["like_num"], 10, 64)
+		collectCount, _ := strconv.ParseInt(stats["collect_num"], 10, 64)
+
+		isLiked, _ := isLikedCmds[postID].Result()
+		isCollected, _ := isCollectedCmds[postID].Result()
+
+		result[postID] = &PostStatsAndRelation{
+			LikeCount:    likeCount,
+			CollectCount: collectCount,
+			IsLiked:      isLiked,
+			IsCollected:  isCollected,
+		}
+	}
 	return result, nil
 }

@@ -4,9 +4,9 @@ import (
 	"strconv"
 
 	dao_es "github.com/preciouswxe/EchoBoard_backend/dao/es"
-	dao_redis "github.com/preciouswxe/EchoBoard_backend/dao/redis"
 	"github.com/preciouswxe/EchoBoard_backend/dao/mysql"
 	"github.com/preciouswxe/EchoBoard_backend/dao/redis"
+	dao_redis "github.com/preciouswxe/EchoBoard_backend/dao/redis"
 	"github.com/preciouswxe/EchoBoard_backend/models"
 	"github.com/preciouswxe/EchoBoard_backend/pkg/snowflake"
 	"go.uber.org/zap"
@@ -63,10 +63,15 @@ func GetPostById(postID, userID int64) (data *models.ApiPostDetail, err error) {
 		return nil, err
 	}
 
-	isLiked, isCollected, err := mysql.GetPostUserRelation(post.ID, userID) // 注意这里传入的是当前用户ID，不是作者ID
-	if err != nil {
-		zap.L().Error("mysql.GetPostUserRelation failed", zap.Error(err))
-	}
+	// 从 Redis 获取实时统计数据
+	likeNum, _ := redis.GetPostLikeCount(postID)
+	collectNum, _ := redis.GetPostCollectCount(postID)
+	// 从 Redis 获取用户互动状态
+	isLiked, _ := redis.IsUserLikedPost(userID, postID)
+	isCollected, _ := redis.IsUserCollectedPost(userID, postID)
+	// 更新帖子的统计数据
+	post.LikeNum = likeNum
+	post.CollectNum = collectNum
 
 	// 拼接并返回数据
 	data = &models.ApiPostDetail{
@@ -124,13 +129,23 @@ func GetPostList2(p *models.ParamPostList, userID int64) (data []*models.ApiPost
 		return
 	}
 
-	// 根据 id 去数据库查询帖子详细信息
+	// 根据 id 去 mysql 查询帖子详细信息
 	// 返回的数据还要按照给定的 id 的顺序返回
 	posts, err := mysql.GetPostListByIDs(ids)
 	if err != nil {
 		return
 	}
 
+	// 从 Redis 批量获取所有帖子的高频统计数据
+	postIDs := make([]int64, len(posts))
+	for i, post := range posts {
+		postIDs[i] = post.ID
+	}
+	statsMap, err := redis.GetPostsStatsAndRelationBatch(postIDs, userID)
+	if err != nil {
+		zap.L().Error("redis.GetPostsStatsAndRelationBatch failed", zap.Error(err))
+		statsMap = make(map[int64]*redis.PostStatsAndRelation)
+	}
 
 	// 列表需要循环读出具体信息
 	for _, post := range posts {
@@ -139,13 +154,17 @@ func GetPostList2(p *models.ParamPostList, userID int64) (data []*models.ApiPost
 			zap.L().Error("getPostInfo failed", zap.Error(err))
 			return nil, err
 		}
-
-		isLiked, isCollected, err := mysql.GetPostUserRelation(post.ID, userID) // 注意这里传入的是当前用户ID，不是作者ID
-		if err != nil {
-			zap.L().Error("mysql.GetPostUserRelation failed", zap.Error(err))
+		// 拼接
+		stats := statsMap[post.ID]
+		isLiked := false
+		isCollected := false
+		if stats != nil {
+			post.LikeNum = stats.LikeCount
+			post.CollectNum = stats.CollectCount
+			isLiked = stats.IsLiked
+			isCollected = stats.IsCollected
 		}
 
-		// 拼接
 		postDetail := &models.ApiPostDetail{
 			AuthorName:      user.Username,
 			IsLiked:         isLiked,
@@ -179,6 +198,16 @@ func GetCommunityPostList(p *models.ParamPostList, userID int64) (data []*models
 		return
 	}
 
+	postIDs := make([]int64, len(posts))
+	for i, post := range posts {
+		postIDs[i] = post.ID
+	}
+
+	statsMap, err := redis.GetPostsStatsAndRelationBatch(postIDs, userID)
+	if err != nil {
+		zap.L().Error("redis.GetPostsStatsAndRelationBatch failed", zap.Error(err))
+		statsMap = make(map[int64]*redis.PostStatsAndRelation)
+	}
 
 	// 列表需要循环读出具体信息
 	for _, post := range posts {
@@ -187,13 +216,16 @@ func GetCommunityPostList(p *models.ParamPostList, userID int64) (data []*models
 			zap.L().Error("getPostInfo failed", zap.Error(err))
 			return nil, err
 		}
-
-		isLiked, isCollected, err := mysql.GetPostUserRelation(post.ID, userID) // 注意这里传入的是当前用户ID，不是作者ID
-		if err != nil {
-			zap.L().Error("mysql.GetPostUserRelation failed", zap.Error(err))
+		stats := statsMap[post.ID]
+		isLiked := false
+		isCollected := false
+		if stats != nil {
+			post.LikeNum = stats.LikeCount
+			post.CollectNum = stats.CollectCount
+			isLiked = stats.IsLiked
+			isCollected = stats.IsCollected
 		}
 
-		// 拼接
 		postDetail := &models.ApiPostDetail{
 			AuthorName:      user.Username,
 			IsLiked:         isLiked,
@@ -295,6 +327,17 @@ func getPostDetailsByIDs(postIDs []int64, userID int64) ([]*models.ApiPostDetail
 		zap.L().Error("mysql.GetPostListByIDs failed", zap.Error(err))
 		return nil, err
 	}
+	// 从 Redis 批量获取最新统计数据
+	actualPostIDs := make([]int64, len(posts))
+	for i, post := range posts {
+		actualPostIDs[i] = post.ID
+	}
+
+	statsMap, err := redis.GetPostsStatsAndRelationBatch(actualPostIDs, userID)
+	if err != nil {
+		zap.L().Error("redis.GetPostsStatsAndRelationBatch failed", zap.Error(err))
+		statsMap = make(map[int64]*redis.PostStatsAndRelation)
+	}
 
 	data := make([]*models.ApiPostDetail, 0, len(posts))
 	for _, post := range posts {
@@ -304,12 +347,16 @@ func getPostDetailsByIDs(postIDs []int64, userID int64) ([]*models.ApiPostDetail
 			return nil, err
 		}
 
-		isLiked, isCollected, err := mysql.GetPostUserRelation(post.ID, userID)
-		if err != nil {
-			zap.L().Error("mysql.GetPostUserRelation failed", zap.Error(err))
+		stats := statsMap[post.ID]
+		isLiked := false
+		isCollected := false
+		if stats != nil {
+			post.LikeNum = stats.LikeCount
+			post.CollectNum = stats.CollectCount
+			isLiked = stats.IsLiked
+			isCollected = stats.IsCollected
 		}
 
-		// 拼接
 		postDetail := &models.ApiPostDetail{
 			AuthorName:      user.Username,
 			Post:            post,
