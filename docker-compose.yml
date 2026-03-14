@@ -1,16 +1,115 @@
-# docker-compose.yml
+version: "3.8"
+
 services:
+
+  # ================= Redis =================
   redisdb:
-    image: "redis:latest"
+    image: redis:latest
     container_name: echoboard_redis
     ports:
-      - "26379:6379"
+      - "6379:6379"
     volumes:
       - ./redisdata:/data
-  echoboard_app:
-    build: .
-    command: sh -c "./wait-for.sh redisdb:6379 -- ./echoboard_app"
+
+  # ================= Elasticsearch =================
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.9.1
+    container_name: elasticsearch
+    environment:
+      - node.name=elasticsearch
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    ports:
+      - "9201:9200"
+      - "9301:9300"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.9.1
+    container_name: kibana
+    ports:
+      - "5601:5601"
     depends_on:
-      - redisdb
+      - elasticsearch
+
+  # ================= Kafka =================
+  zoo1:
+    image: confluentinc/cp-zookeeper:7.3.2
+    container_name: zoo1
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_SERVER_ID: 1
+
+  kafka1:
+    image: confluentinc/cp-kafka:7.3.2
+    container_name: kafka1
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+      - "9999:9999"
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zoo1:2181
+      KAFKA_BROKER_ID: 1
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    depends_on:
+      - zoo1
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui
+    container_name: kafka-ui
+    ports:
+      - "8085:8080"
+    depends_on:
+      - kafka1
+    environment:
+      DYNAMIC_CONFIG_ENABLED: "true"
+
+  # ================= Go API =================
+  echoboard_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: echoboard_app
+    command: sh -c "./wait-for.sh redisdb:6379 -- ./echoboard_app"
     ports:
       - "8081:8081"
+    depends_on:
+      - redisdb
+      - kafka1
+      - elasticsearch
+
+  # ================= Kafka Consumer =================
+  echoboard_consumer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: echoboard_consumer
+    command: sh -c "./wait-for.sh redisdb:6379 -- ./consumer_app"
+    depends_on:
+      - redisdb
+      - kafka1
+      - elasticsearch
+
+  # ================= Vue 前端 =================
+  frontend:
+    build:
+      context: ../EchoBoard_frontend
+      dockerfile: ../EchoBoard_frontend/Dockerfile
+    container_name: echoboard_frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - echoboard_app
+
+volumes:
+  es_data:
+    driver: local
+  kafka_data:
+    driver: local
