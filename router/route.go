@@ -50,6 +50,8 @@ func SetupRouter(mode string) *gin.Engine {
 
 		// 2. 帖子相关
 		v1.POST("/post", postController.CreatePostHandler)
+		v1.GET("/feed", postController.GetFeedHandler)
+		v1.POST("/feed/impressions", postController.ReportFeedImpressionsHandler)
 		v1.GET("/post/:id", postController.GetPostDetailHandler)
 		//v1.GET("/posts", postController.GetPostListHandler)   // 暂时不用
 		v1.GET("/posts2", postController.GetPostListHandler2) // 根据时间或分数获取帖子列表

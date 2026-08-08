@@ -37,6 +37,7 @@ func CreatePost(postID, communityID int64) error {
 		"like_num": 0,
 		"collect_num": 0,
 		"comment_num": 0,
+		"view_num":    0,
 	})
 
 	// 4. 补充：把帖子 id 加到社区的 set
@@ -57,6 +58,109 @@ func CreatePost(postID, communityID int64) error {
 }
 
 // getIDsFromKey 包内用于计算索引起始点
+// FeedCandidate contains the real-time values used to rank a Feed post.
+type FeedCandidate struct {
+	PostID     int64
+	CreateTime time.Time
+	LikeNum    int64
+	CollectNum int64
+	CommentNum int64
+	ViewNum    int64
+}
+
+func GetFeedCandidates(limit int64) ([]FeedCandidate, error) {
+	if limit <= 0 {
+		return []FeedCandidate{}, nil
+	}
+	if limit > 500 {
+		limit = 500
+	}
+
+	ctx := context.Background()
+	end := limit - 1
+	recent, err := client.ZRevRange(ctx, getRedisKey(KeyPostTimeZSet), 0, end).Result()
+	if err != nil {
+		return nil, err
+	}
+	hot, err := client.ZRevRange(ctx, getRedisKey(KeyPostScoreZSet), 0, end).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	ids := make(map[string]struct{}, len(recent)+len(hot))
+	for _, id := range recent {
+		ids[id] = struct{}{}
+	}
+	for _, id := range hot {
+		ids[id] = struct{}{}
+	}
+
+	pipe := client.Pipeline()
+	createdCmds := make(map[string]*redis.FloatCmd, len(ids))
+	statsCmds := make(map[string]*redis.StringStringMapCmd, len(ids))
+	for id := range ids {
+		createdCmds[id] = pipe.ZScore(ctx, getRedisKey(KeyPostTimeZSet), id)
+		statsCmds[id] = pipe.HGetAll(ctx, getRedisKey(KeyPostStatsPF+id))
+	}
+	if _, err = pipe.Exec(ctx); err != nil && !errors.Is(err, redis.Nil) {
+		return nil, err
+	}
+
+	parseCount := func(stats map[string]string, field string) int64 {
+		count, _ := strconv.ParseInt(stats[field], 10, 64)
+		return count
+	}
+	result := make([]FeedCandidate, 0, len(ids))
+	for id := range ids {
+		postID, parseErr := strconv.ParseInt(id, 10, 64)
+		if parseErr != nil {
+			continue
+		}
+		createdAt, createdErr := createdCmds[id].Result()
+		if createdErr != nil || createdAt <= 0 {
+			continue
+		}
+		stats, _ := statsCmds[id].Result()
+		result = append(result, FeedCandidate{
+			PostID:     postID,
+			CreateTime: time.Unix(int64(createdAt), 0),
+			LikeNum:    parseCount(stats, "like_num"),
+			CollectNum: parseCount(stats, "collect_num"),
+			CommentNum: parseCount(stats, "comment_num"),
+			ViewNum:    parseCount(stats, "view_num"),
+		})
+	}
+	return result, nil
+}
+
+func UpdateFeedScores(scores map[int64]float64) error {
+	if len(scores) == 0 {
+		return nil
+	}
+	items := make([]*redis.Z, 0, len(scores))
+	for postID, score := range scores {
+		items = append(items, &redis.Z{Member: postID, Score: score})
+	}
+	return client.ZAdd(context.Background(), getRedisKey(KeyPostScoreZSet), items...).Err()
+}
+
+func RecordFeedImpressions(postIDs []int64) error {
+	if len(postIDs) == 0 {
+		return nil
+	}
+	ctx := context.Background()
+	pipe := client.Pipeline()
+	for _, postID := range postIDs {
+		pipe.HIncrBy(ctx, getRedisKey(KeyPostStatsPF+strconv.FormatInt(postID, 10)), "view_num", 1)
+	}
+	_, err := pipe.Exec(ctx)
+	return err
+}
+
+func IncrementPostCommentCount(postID int64) error {
+	return client.HIncrBy(context.Background(), getRedisKey(KeyPostStatsPF+strconv.FormatInt(postID, 10)), "comment_num", 1).Err()
+}
+
 func getIDsFromKey(key string, page, size int64) ([]string, error) {
 	start := (page - 1) * size
 	end := start + size - 1

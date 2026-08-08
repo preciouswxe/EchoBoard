@@ -43,6 +43,16 @@ type ParamSearchPostList struct {
 }
 
 // ParamCommunityPostList 按社区获取帖子列表 query string 参数  [GET]
+type ParamFeedList struct {
+	Cursor string `form:"cursor"`
+	Size   int    `form:"size"`
+}
+
+// Post IDs are strings because Snowflake IDs exceed JavaScript's safe integer range.
+type FeedImpressionRequest struct {
+	PostIDs []string `json:"post_ids" binding:"required,min=1,max=50"`
+}
+
 //type ParamCommunityPostList struct {
 //	*ParamPostList
 //}
