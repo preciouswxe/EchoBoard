@@ -26,6 +26,7 @@ require (
 require github.com/gin-contrib/pprof v1.5.3
 
 require (
+	github.com/aliyun/aliyun-oss-go-sdk v3.0.2+incompatible // indirect
 	github.com/elastic/elastic-transport-go/v8 v8.8.0 // indirect
 	github.com/elastic/go-elasticsearch/v8 v8.19.3 // indirect
 	github.com/elastic/go-elasticsearch/v9 v9.3.1 // indirect
@@ -40,6 +41,7 @@ require (
 	go.opentelemetry.io/otel v1.35.0 // indirect
 	go.opentelemetry.io/otel/metric v1.35.0 // indirect
 	go.opentelemetry.io/otel/trace v1.35.0 // indirect
+	golang.org/x/time v0.8.0 // indirect
 )
 
 require (

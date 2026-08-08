@@ -44,6 +44,9 @@ func SetupRouter(mode string) *gin.Engine {
 	// 开启 JWT 认证
 	v1.Use(middlewares.JWTAuthMiddleware())
 	{
+		// 0. 媒体上传
+		v1.POST("/upload", controller.UploadHandler)
+
 		// 1. 话题（社区）相关
 		v1.GET("/community", controller.CommunityHandler)
 		v1.GET("/community/:id", controller.CommunityDetailHandler)

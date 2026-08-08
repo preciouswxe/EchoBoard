@@ -18,6 +18,7 @@ type multipleConfig struct {
 	*RedisConfig `mapstructure:"redis"`
 	*EsConfig	 `mapstructure:"es"`
 	*KafkaConfig `mapstructure:"kafka"`
+	*OssConfig   `mapstructure:"oss"`
 }
 
 type AppConfig struct {
@@ -58,6 +59,14 @@ type RedisConfig struct {
 type EsConfig struct {
 	Host string `mapstructure:"host"`
 	Port int 	`mapstructure:"port"`
+}
+
+type OssConfig struct {
+	Endpoint        string `mapstructure:"endpoint"`         // 如 oss-cn-hangzhou.aliyuncs.com
+	AccessKeyID     string `mapstructure:"access_key_id"`    // AccessKey ID
+	AccessKeySecret string `mapstructure:"access_key_secret"` // AccessKey Secret
+	Bucket          string `mapstructure:"bucket"`            // Bucket 名称
+	PublicDomain    string `mapstructure:"public_domain"`     // 可选：自定义域名（需备案），留空则用 bucket.endpoint
 }
 
 type KafkaConfig struct {

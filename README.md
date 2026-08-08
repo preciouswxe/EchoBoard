@@ -17,6 +17,7 @@ Docker & Compose + pprof
 ### 业务
 - 用户注册/登录，基于 JWT 管理 loginToken
 - 帖子点赞、收藏、评论feed流系统，使用 wilson 置信区间算法推荐帖子热度排序
+- 媒体帖子：纯文字 / 多图图文 / 视频，前端 canvas 截取视频首帧作封面，媒体转存 OSS 后 JSON 结构化落库（`[{type,url,poster}]`）
 - 配置 Air 热加载 & Zap分级日志管理
 - 分布式 ID 生成 (by Snowflake雪花算法)
 - Redis pipeline 批量读写提升性能，启用事务保证执行正确性

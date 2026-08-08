@@ -31,6 +31,12 @@ func CreatePostHandler(c *gin.Context) {
 		controller.ResponseError(c, controller.CodeInvalidParam)
 		return
 	}
+	// content 或 media 至少有一个（纯视频帖可只有 media）
+	if p.Content == "" && p.Media == "" {
+		zap.L().Error("create post: content and media both empty")
+		controller.ResponseError(c, controller.CodeInvalidParam)
+		return
+	}
 	// 从 context 取到当前发送请求的用户的 ID
 	userID, err := controller.GetCurrentUser(c)
 	if err != nil {

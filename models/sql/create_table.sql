@@ -119,3 +119,11 @@ CREATE TABLE `post_comment` (
                                 KEY `idx_user_id` (`user_id`),
                                 KEY `idx_parent_id` (`parent_id`)
 )ENGINE=INNODB DEFAULT CHARSET=utf8mb4 COMMENT='帖子评论表';
+
+
+-- ================================================
+-- 5. 帖子媒体列（图片/视频 URL，JSON 数组字符串）
+-- 已有库需执行：ALTER TABLE post ADD COLUMN media VARCHAR(4096) NOT NULL DEFAULT '' COMMENT '媒体JSON数组';
+-- ================================================
+ALTER TABLE `post`
+    ADD COLUMN `media` VARCHAR(4096) NOT NULL DEFAULT '' COMMENT '媒体JSON数组，如 [{"type":"image","url":"..."}]';

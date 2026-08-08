@@ -18,6 +18,7 @@ import (
 	"github.com/preciouswxe/EchoBoard_backend/dao/mysql"
 	"github.com/preciouswxe/EchoBoard_backend/dao/redis"
 	"github.com/preciouswxe/EchoBoard_backend/logger"
+	"github.com/preciouswxe/EchoBoard_backend/pkg/oss"
 	"github.com/preciouswxe/EchoBoard_backend/pkg/snowflake"
 	"github.com/preciouswxe/EchoBoard_backend/router"
 	"github.com/preciouswxe/EchoBoard_backend/setting"
@@ -78,22 +79,28 @@ func main() {
 	}
 	defer kafka.Close()
 
-	// 7. 加载雪花算法
+	// 7. 初始化 OSS（媒体存储）
+	if err := oss.Init(setting.Conf.OssConfig); err != nil {
+		zap.L().Error("init oss failed", zap.Error(err))
+		return
+	}
+
+	// 8. 加载雪花算法
 	if err := snowflake.Init(setting.Conf.AppConfig.StartTime, setting.Conf.AppConfig.MachineID); err != nil {
 		fmt.Printf("init snowflake failed, err:%v\n", err)
 		return
 	}
 
-	// 8. 初始化 gin 框架内置的校验器使用的翻译器
+	// 9. 初始化 gin 框架内置的校验器使用的翻译器
 	if err := controller.InitTrans("zh"); err != nil {
 		fmt.Printf("init trans failed, err:%v\n", err)
 		return
 	}
 
-	// 9. 注册路由
+	// 10. 注册路由
 	r := router.SetupRouter(setting.Conf.Mode)
 
-	// 10. 启动服务（优雅关机）
+	// 11. 启动服务（优雅关机）
 	srv := &http.Server{
 		Addr:    fmt.Sprintf("%s:%d", viper.GetString("app.host"), viper.GetInt("app.port")),
 		Handler: r,

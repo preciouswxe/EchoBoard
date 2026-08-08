@@ -10,7 +10,8 @@ type Post struct {
 	CommunityID int64     `json:"community_id" db:"community_id" binding:"required"`
 	Status      int32     `json:"status" db:"status"`
 	Title       string    `json:"title" db:"title" binding:"required"`
-	Content     string    `json:"content" db:"content" binding:"required"`
+	Content     string    `json:"content" db:"content"` // 纯视频帖可无文字，handler 内校验 content 或 media 至少一个
+	Media       string    `json:"media,omitempty" db:"media"` // 媒体JSON数组字符串，如 [{"type":"image","url":"..."}]
 	CreateTime  time.Time `json:"create_time" db:"create_time"`
 
 	LikeNum    int64 `json:"like_num" db:"like_num"`
@@ -47,6 +48,7 @@ type PostCreateRequest struct {
 	CommunityID int64  `json:"community_id" binding:"required"`
 	Title       string `json:"title" binding:"required"`
 	Content     string `json:"content" binding:"required"`
+	Media       string `json:"media"` // 媒体JSON数组字符串，可为空
 }
 
 /*

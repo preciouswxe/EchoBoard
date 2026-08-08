@@ -12,10 +12,10 @@ import (
 // CreatePost 创建帖子
 func CreatePost(p *models.Post) (err error) {
 	sqlStr := `insert into post(
-	post_id, title, content, author_id, community_id)
-	values (?,?,?,?,?)`
+	post_id, title, content, media, author_id, community_id)
+	values (?,?,?,?,?,?)`
 
-	_, err = db.Exec(sqlStr, p.ID, p.Title, p.Content, p.AuthorID, p.CommunityID)
+	_, err = db.Exec(sqlStr, p.ID, p.Title, p.Content, p.Media, p.AuthorID, p.CommunityID)
 	return
 }
 
@@ -23,7 +23,7 @@ func CreatePost(p *models.Post) (err error) {
 func GetPostById(postID int64) (post *models.Post, err error) {
 	post = new(models.Post)
 	sqlStr := `select 
-    post_id, title, content, author_id, community_id, status, like_num, collect_num, comment_num, create_time
+    post_id, title, content, media, author_id, community_id, status, like_num, collect_num, comment_num, create_time
 	from post
 	where post_id = ?`
 
@@ -34,7 +34,7 @@ func GetPostById(postID int64) (post *models.Post, err error) {
 // GetPostList 查询帖子列表函数 (以时间排序 从新到旧返回)
 func GetPostList(page, size int64) (posts []*models.Post, err error) {
 	sqlStr := `select 
-    post_id, title, content, author_id, community_id, status, like_num, collect_num, comment_num, create_time
+    post_id, title, content, media, author_id, community_id, status, like_num, collect_num, comment_num, create_time
 	from post
 	ORDER BY create_time
 	DESC
@@ -48,7 +48,7 @@ func GetPostList(page, size int64) (posts []*models.Post, err error) {
 // GetPostListByIDs 根据给定的 id 列表查询帖子数据
 func GetPostListByIDs(ids []string) (postList []*models.Post, err error) {
 	sqlStr := `select 
-    post_id, title, content, author_id, community_id, like_num, collect_num, comment_num, create_time
+    post_id, title, content, media, author_id, community_id, like_num, collect_num, comment_num, create_time
 	from post
 	where post_id in (?)
 	order by  FIND_IN_SET(post_id, ?)
