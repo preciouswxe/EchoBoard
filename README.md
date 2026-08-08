@@ -10,7 +10,7 @@ Go 1.24 + Gin + SQLX + MySQL + Redis + Kafka + Elasticsearch +
 JWT + Zap + Viper + Snowflake + validator + swagger +
 Docker & Compose + pprof
 
-![EchoBoard项目演示动画gif](static/markdown_photo/EchoBoard_show0304.gif)
+<video src="static/markdown_photo/EchoBoard_show0807.mp4" controls></video>
 
 ## 功能亮点
 
