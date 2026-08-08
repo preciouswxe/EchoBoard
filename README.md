@@ -10,19 +10,21 @@ Go 1.24 + Gin + SQLX + MySQL + Redis + Kafka + Elasticsearch +
 JWT + Zap + Viper + Snowflake + validator + swagger +
 Docker & Compose + pprof
 
+![EchoBoard项目演示动画gif](static/markdown_photo/EchoBoard_show0304.gif)
+
 ## 功能亮点
 
 ### 业务
 - 用户注册/登录，基于 JWT 管理 loginToken
-- 帖子点赞、收藏、评论系统，Redis 缓存加速用户交互体验
+- 帖子点赞、收藏、评论feed流系统，使用 wilson 置信区间算法推荐帖子热度排序
 - 配置 Air 热加载 & Zap分级日志管理
 - 分布式 ID 生成 (by Snowflake雪花算法)
 - Redis pipeline 批量读写提升性能，启用事务保证执行正确性
-- Elasticsearch 支持关键词技术内容高效检索
+- Elasticsearch 支持关键词技术内容高效检索，提升用户体验
 - 优雅关停，捕获系统信号确保平滑下线
 - 令牌桶限流中间件控制恶意频繁请求
 - Kafka 异步消息队列 + 死信队列(DLQ)机制,保证 MySQL 和 Redis 双写的最终一致性和幂等性
-- 消费者端实现重试机制(最多3次,指数退避)和死信队列兜底,确保消息不丢失
+- 消费者端实现重试机制(最多3次,指数退避)和死信队列兜底,确保消息不丢失可溯源
 ```
 用户点赞/收藏行为的生产和消费链条 - 以点赞为例
   ↓
@@ -49,8 +51,6 @@ Docker & Compose + pprof
 - Redis RDB 持久化，容器重启数据不丢失
 - Docker Compose 容器化，一键启动 & 端口映射
 
-
-![EchoBoard项目演示动画gif](static/markdown_photo/EchoBoard_show0304.gif)
 
 
 ## 快速开始
