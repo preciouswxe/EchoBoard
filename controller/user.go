@@ -8,6 +8,7 @@ import (
 	"github.com/preciouswxe/EchoBoard_backend/dao/mysql"
 	"github.com/preciouswxe/EchoBoard_backend/logic"
 	"github.com/preciouswxe/EchoBoard_backend/models"
+	"github.com/preciouswxe/EchoBoard_backend/pkg/jwt"
 	"go.uber.org/zap"
 )
 
@@ -95,8 +96,74 @@ func LoginHandler(c *gin.Context) {
 
 	// 3. 返回响应
 	ResponseSuccess(c, gin.H{
-		"user_id":   fmt.Sprintf("%d", user.UserID),
-		"user_name": user.Username,
-		"token":     user.Token,
+		"user_id":       fmt.Sprintf("%d", user.UserID),
+		"user_name":     user.Username,
+		"access_token":  user.Token,
+		"refresh_token": user.RefreshToken,
 	})
+}
+
+// RefreshHandler
+// @Summary 刷新令牌
+// @Description 用 refresh token 换发新的 access + refresh 双令牌（轮换机制）
+// @Tags 用户相关接口
+// @Accept application/json
+// @Produce application/json
+// @Param body body models.ParamRefresh true "刷新令牌参数"
+// @Success 200 {object} _ResponseUserLogin
+// @Router /api/v1/refresh [post]
+func RefreshHandler(c *gin.Context) {
+	// 1. 获取参数和参数校验
+	p := new(models.ParamRefresh)
+	if err := c.ShouldBindJSON(p); err != nil {
+		ResponseError(c, CodeInvalidParam)
+		return
+	}
+
+	// 2. 解析并校验 refresh token（必须是 refresh 类型）
+	mc, err := jwt.ParseToken(p.RefreshToken)
+	if err != nil || mc.TokenType != jwt.TokenTypeRefresh {
+		ResponseError(c, CodeInvalidToken)
+		return
+	}
+
+	// 3. 换发新双令牌（校验 Redis 一致性，防重放 + 单端登录）
+	accessToken, refreshToken, err := logic.RefreshTokens(mc.UserID, mc.Username, p.RefreshToken)
+	if err != nil {
+		ResponseError(c, CodeInvalidToken)
+		return
+	}
+
+	// 4. 返回响应
+	ResponseSuccess(c, gin.H{
+		"access_token":  accessToken,
+		"refresh_token": refreshToken,
+	})
+}
+
+// LogoutHandler
+// @Summary 用户登出
+// @Description 用户登出，撤销 Redis 中保存的登录令牌，使其立即失效
+// @Tags 用户相关接口
+// @Accept application/json
+// @Produce application/json
+// @Param Authorization header string true "Bearer 用户 token 令牌"
+// @Security ApiKeyAuth
+// @Success 200 {object} _ResponseCommon
+// @Router /api/v1/logout [post]
+func LogoutHandler(c *gin.Context) {
+	// 1. 获取当前登录用户
+	userID, err := GetCurrentUser(c)
+	if err != nil {
+		ResponseError(c, CodeNeedLogin)
+		return
+	}
+	// 2. 删除 Redis 中保存的登录令牌（幂等，重复登出也返回成功）
+	if err := logic.Logout(userID); err != nil {
+		zap.L().Error("logic.Logout failed", zap.Int64("user_id", userID), zap.Error(err))
+		ResponseError(c, CodeServerBusy)
+		return
+	}
+	// 3. 返回成功
+	ResponseSuccess(c, nil)
 }

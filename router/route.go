@@ -40,10 +40,15 @@ func SetupRouter(mode string) *gin.Engine {
 	v1.POST("/signup", controller.SignUpHandler)
 	// 登录
 	v1.POST("/login", controller.LoginHandler)
+	// 刷新令牌（放 JWT 认证组外，因为请求时 access token 可能已过期）
+	v1.POST("/refresh", controller.RefreshHandler)
 
 	// 开启 JWT 认证
 	v1.Use(middlewares.JWTAuthMiddleware())
 	{
+		// 0. 登出（撤销 Redis 登录令牌）
+		v1.POST("/logout", controller.LogoutHandler)
+
 		// 0. 媒体上传
 		v1.POST("/upload", controller.UploadHandler)
 

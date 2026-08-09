@@ -1,4 +1,7 @@
 # EchoBoard - 蓝域
+
+> 前端仓库：[EchoBoard-fe](https://github.com/preciouswxe/EchoBoard-fe)
+
 产品需求模拟：
 一个面向开发者的轻量级技术分享平台，采用小红书式内容流与互动设计，
 实现高性能读写与全文搜索、相关推荐能力。

@@ -20,6 +20,11 @@ type ParamLogin struct {
 	Password string `json:"password" binding:"required"`
 }
 
+// ParamRefresh 刷新令牌请求参数
+type ParamRefresh struct {
+	RefreshToken string `json:"refresh_token" binding:"required"`
+}
+
 // ParamVoteData 投票数据
 type ParamVoteData struct {
 	// UserID 从请求中获取当前的用户
